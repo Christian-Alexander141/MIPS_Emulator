@@ -1,0 +1,9 @@
+# Ein kleines MIPS-Programm
+# Ziel: Zwei Zahlen vergleichen, das größere in $5 speichern
+
+# Initialisierung
+addi $1, $0, 7      # $1 = 7
+addi $2, $0, 12     # $2 = 12
+
+# Vergleiche: ist $1 < $2 ?
+slt  $3, $1, $2     # $3 = 1, wenn $1 < $2, sonst 0
