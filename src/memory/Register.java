@@ -97,11 +97,12 @@ public class Register {
             String reset = "\u001B[0m";
 
             System.out.printf(
-                    "$%02d: %s%s%s (dez: %d)%n",
+                    "$%02d: %s%s%s (hex: 0x%08x, dez: %d)%n",
                     i,
                     green,
                     binStr,
                     reset,
+                    value,
                     value
             );
         }

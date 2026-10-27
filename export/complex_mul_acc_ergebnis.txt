@@ -1,0 +1,23 @@
+Programm: complex_mul_acc
+Takte: 22
+
+Register (ungleich 0):
+  $8  $t0   = 0x00000003 (dez: 3)
+  $9  $t1   = 0x00000004 (dez: 4)
+  $10 $t2   = 0x00000005 (dez: 5)
+  $11 $t3   = 0xfffffffe (dez: -2)
+  $12 $t4   = 0x00000001 (dez: 1)
+  $13 $t5   = 0x00000001 (dez: 1)
+  $16 $s0   = 0x00007f00 (dez: 32512)
+  $17 $s1   = 0x00000017 (dez: 23)
+  $18 $s2   = 0x0000000e (dez: 14)
+
+RAM:
+  [0x00000000] = 0x00000017 (dez: 23)
+  [0x00000004] = 0x0000000e (dez: 14)
+
+CMUL:
+  Latenz: 4 Takte, Nachkommabits: 0
+  A = 3 +4 j, B = 5 -2 j
+  Ergebnis = 23 +14 j (RES_RE = 0x00000017, RES_IM = 0x0000000e), DONE = 1
+  Berechnungen gestartet: 1, Takte belegt: 4

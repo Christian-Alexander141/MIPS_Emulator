@@ -1,0 +1,1409 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIPS-Emulator Softwaredokumentation</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --surface-2: #f3f2ef;
+    --line: #d6d5cf;
+    --grid: #e6e5e0;
+    --text-primary: #1a1a19;
+    --text-secondary: #52514e;
+    --text-muted: #7a7973;
+    --orig: #2a78d6;
+    --orig-tint: #e4eefb;
+    --ext: #eb6834;
+    --ext-tint: #fdebe2;
+    --series-3: #1baf7a;
+    --code-bg: #f1f0ec;
+    --hatch: #c9c8c2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --surface-2: #242423;
+      --line: #43423f;
+      --grid: #2f2f2d;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #94938b;
+      --orig: #3987e5;
+      --orig-tint: #1a2b41;
+      --ext: #d95926;
+      --ext-tint: #3b2318;
+      --series-3: #199e70;
+      --code-bg: #262625;
+      --hatch: #4a4945;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --surface-2: #242423;
+    --line: #43423f;
+    --grid: #2f2f2d;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #94938b;
+    --orig: #3987e5;
+    --orig-tint: #1a2b41;
+    --ext: #d95926;
+    --ext-tint: #3b2318;
+    --series-3: #199e70;
+    --code-bg: #262625;
+    --hatch: #4a4945;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 22px; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; margin: 28px 0 8px; }
+  h4 { font-size: 15px; margin: 20px 0 6px; }
+  p, li { max-width: 78ch; }
+  a { color: var(--orig); }
+  code, pre, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; line-height: 1.45; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 16px; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--text-secondary); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+
+  .subtitle { color: var(--text-secondary); font-size: 17px; margin: 0 0 20px; }
+  .meta { color: var(--text-muted); font-size: 13px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; line-height: 1; padding: 4px 8px;
+           border-radius: 999px; border: 1px solid; vertical-align: middle; white-space: nowrap; }
+  .badge.orig { background: var(--orig-tint); border-color: var(--orig); color: var(--text-primary); }
+  .badge.ext { background: var(--ext-tint); border-color: var(--ext); color: var(--text-primary); }
+  .badge.mix { background: linear-gradient(90deg, var(--orig-tint) 50%, var(--ext-tint) 50%);
+               border-color: var(--text-muted); color: var(--text-primary); }
+  h2 .badge, h3 .badge { margin-left: 8px; font-size: 11px; }
+
+  .callout { border-left: 4px solid var(--line); background: var(--surface-2); padding: 12px 16px;
+             border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.orig { border-left-color: var(--orig); }
+  .callout.ext { border-left-color: var(--ext); }
+  .callout p { margin: 4px 0; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--surface-1); }
+  .card.orig { border-top: 4px solid var(--orig); }
+  .card.ext { border-top: 4px solid var(--ext); }
+  .card h4 { margin-top: 0; }
+  .card ul { padding-left: 18px; margin: 6px 0; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .stat .label { color: var(--text-secondary); font-size: 13px; }
+  .stat .value { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat .note { color: var(--text-muted); font-size: 12px; }
+  .stat.orig { border-left: 4px solid var(--orig); }
+  .stat.ext { border-left: 4px solid var(--ext); }
+
+  figure { margin: 20px 0 28px; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { color: var(--text-secondary); font-size: 13px; margin-top: 8px; }
+  figcaption b { color: var(--text-primary); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-secondary); margin: 4px 0 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .sw.orig { background: var(--orig); }
+  .sw.ext { background: var(--ext); }
+  .sw.s3 { background: var(--series-3); }
+
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 2px 0; }
+
+  /* SVG-Klassen */
+  .f-surface { fill: var(--surface-1); }
+  .f-box { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+  .f-orig { fill: var(--orig-tint); stroke: var(--orig); stroke-width: 1.5; }
+  .f-ext { fill: var(--ext-tint); stroke: var(--ext); stroke-width: 1.5; }
+  .f-mix { fill: url(#mixFill); stroke: var(--text-muted); stroke-width: 1.5; }
+  .f-frame { fill: none; stroke: var(--line); stroke-width: 1.5; }
+  .f-hatch { fill: url(#hatch); stroke: var(--line); stroke-width: 1; }
+  .t { fill: var(--text-primary); font-size: 13px; font-family: system-ui, sans-serif; }
+  .tb { fill: var(--text-primary); font-size: 13px; font-weight: 600; font-family: system-ui, sans-serif; }
+  .ts { fill: var(--text-secondary); font-size: 11px; font-family: system-ui, sans-serif; }
+  .tm { fill: var(--text-primary); font-size: 11px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .tms { fill: var(--text-secondary); font-size: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .ln { stroke: var(--text-secondary); stroke-width: 1.5; fill: none; }
+  .ln-orig { stroke: var(--orig); stroke-width: 2; fill: none; }
+  .ln-ext { stroke: var(--ext); stroke-width: 2; fill: none; }
+  .ln-sig { stroke: var(--text-primary); stroke-width: 1.5; fill: none; }
+  .grid { stroke: var(--grid); stroke-width: 1; }
+  .axis { stroke: var(--line); stroke-width: 1; }
+  .m-orig { fill: var(--orig); }
+  .m-ext { fill: var(--ext); }
+  .m-s3 { fill: var(--series-3); }
+  .arrowhead { fill: var(--text-secondary); }
+  .hollow { fill: var(--surface-1); stroke: var(--text-secondary); stroke-width: 1.5; }
+  .hl { fill: var(--ext); opacity: 0.12; }
+  .hl2 { fill: var(--series-3); opacity: 0.14; }
+  [data-tip] { cursor: default; }
+  [data-tip]:hover { opacity: 0.85; }
+
+  #tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface-1); color: var(--text-primary);
+         border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 13px;
+         box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; max-width: 280px; }
+
+  @media (max-width: 680px) {
+    .split, .stats { grid-template-columns: 1fr; }
+    h1 { font-size: 24px; }
+  }
+
+  @page { size: A4; margin: 16mm 14mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"] {
+      color-scheme: light;
+      --surface-1: #ffffff; --surface-2: #f3f2ef; --line: #d6d5cf; --grid: #e6e5e0;
+      --text-primary: #1a1a19; --text-secondary: #52514e; --text-muted: #7a7973;
+      --orig: #2a78d6; --orig-tint: #e4eefb; --ext: #eb6834; --ext-tint: #fdebe2;
+      --series-3: #1baf7a; --code-bg: #f1f0ec; --hatch: #c9c8c2;
+    }
+    body { font-size: 10.5pt; background: #fff; }
+    main { max-width: none; padding: 0; }
+    h2 { break-before: page; border-top: none; margin-top: 0; }
+    h2.keep { break-before: auto; }
+    figure svg, pre, .callout, .card, .stats, tr { break-inside: avoid; }
+    figure > .table-wrap table, .table-wrap.keep table { break-inside: avoid; }
+    thead { display: table-header-group; }
+    h3, h4, .legend { break-after: avoid; }
+    a { color: var(--text-primary); text-decoration: none; }
+    #tip { display: none !important; }
+    .cover { min-height: 240mm; display: flex; flex-direction: column; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<!-- SVG-Definitionen, die alle Grafiken gemeinsam nutzen -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mixFill" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="50%" style="stop-color: var(--orig-tint)"/>
+      <stop offset="50%" style="stop-color: var(--ext-tint)"/>
+    </linearGradient>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" style="fill: var(--surface-2)"/>
+      <line x1="0" y1="0" x2="0" y2="6" style="stroke: var(--hatch); stroke-width: 2"/>
+    </pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+    </marker>
+    <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" class="hollow"/>
+    </marker>
+  </defs>
+</svg>
+
+<section class="cover">
+  <p class="meta">Begleitdokumentation zur Bachelorarbeit · Stand: 28. Oktober 2026</p>
+  <h1>MIPS-Emulator</h1>
+  <p class="subtitle">Softwaredokumentation – vom Lern-Emulator (2018) zum Referenzmodell für den
+    cristian1604-MIPS mit Bus-angebundenem Beschleuniger für die Multiplikation komplexer Zahlen</p>
+  <p>
+    <span class="badge orig">Original 2018 – händische Implementierung</span>
+    <span class="badge ext">Erweiterung 2026 – KI-gestützt</span>
+    <span class="badge mix">gemischt</span>
+  </p>
+  <p class="meta">Diese Farbkennzeichnung wird im gesamten Dokument verwendet – in Überschriften, Tabellen und
+    Grafiken. Blau steht für Code aus der ursprünglichen Implementierung von 2018, Orange für die Erweiterung
+    von 2026.</p>
+
+  <nav class="toc">
+    <h3>Inhalt</h3>
+    <ol>
+      <li><a href="#abgrenzung">Abgrenzung: Originalimplementierung und Erweiterung</a></li>
+      <li><a href="#ueberblick">Systemüberblick</a></li>
+      <li><a href="#original">Die Originalimplementierung von 2018</a></li>
+      <li><a href="#ziel">Zielplattform cristian1604/mips</a></li>
+      <li><a href="#kette">Verarbeitungskette der Erweiterung</a></li>
+      <li><a href="#assembler">Assembler</a></li>
+      <li><a href="#cpu">CPU-Emulation</a></li>
+      <li><a href="#bus">Bus und Speicherbelegung</a></li>
+      <li><a href="#acc">Beschleuniger für komplexe Multiplikation</a></li>
+      <li><a href="#export">Hex-Export</a></li>
+      <li><a href="#klassen">Klassenstruktur</a></li>
+      <li><a href="#bedienung">Bedienung</a></li>
+      <li><a href="#ergebnisse">Beispielprogramme und Ergebnisse</a></li>
+      <li><a href="#test">Test und Verifikation</a></li>
+      <li><a href="#grenzen">Grenzen und Ausblick</a></li>
+      <li><a href="#anhang">Anhang: Dateiverzeichnis mit Herkunft</a></li>
+    </ol>
+  </nav>
+</section>
+
+<!-- ============================================================ 1 -->
+<h2 id="abgrenzung">1 Abgrenzung: Originalimplementierung und Erweiterung</h2>
+
+<p>Das Projekt besteht aus zwei klar unterscheidbaren Entwicklungsständen. Diese Abgrenzung steht bewusst am
+Anfang, damit bei jeder Komponente nachvollziehbar ist, von wem und wann sie stammt.</p>
+
+<div class="split">
+  <div class="card orig">
+    <h4>Originalimplementierung <span class="badge orig">2018</span></h4>
+    <ul>
+      <li>Händisch vom Autor geschrieben, im Jahr 2018</li>
+      <li>Ziel: einfacher Lern-Emulator für MIPS-Assembler (Vorlesung, Tutorium, Nachhilfe)</li>
+      <li>Ins Git-Repository eingecheckt in Commit <code>874bd1e</code> („CPU geschrieben, loader implementiert,
+        kleine programme laufen“, Commit-Datum 03.10.2025) und <code>9b2462d</code> (README)</li>
+      <li>Umfang: 395 Zeilen Java, 62 Zeilen Assembler</li>
+    </ul>
+  </div>
+  <div class="card ext">
+    <h4>Erweiterung <span class="badge ext">Oktober 2026</span></h4>
+    <ul>
+      <li>Erstellt mit dem KI-Assistenten <b>Claude</b> (Anthropic) in der Entwicklungsumgebung Claude Code</li>
+      <li>Vorgaben des Autors: cristian1604/mips als Ziel-CPU, Anbindung des Beschleunigers über einen Bus,
+        Hex-Ausgabe nach erfolgreicher Simulation, Dokumentation aller Änderungen</li>
+      <li>Ziel: Referenzmodell für die Hardware-Entwicklung in der Bachelorarbeit</li>
+      <li>Umfang: 1&nbsp;736 Zeilen Java (davon 229 in bestehenden Dateien), 133 Zeilen Assembler</li>
+    </ul>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat orig"><div class="label">Java-Zeilen Original (erhalten)</div><div class="value">343</div><div class="note">von 395 Zeilen aus 2018</div></div>
+  <div class="stat ext"><div class="label">Java-Zeilen Erweiterung</div><div class="value">1&nbsp;736</div><div class="note">1&nbsp;507 in neuen Dateien</div></div>
+  <div class="stat orig"><div class="label">Unverändert übernommene Dateien</div><div class="value">3</div><div class="note">CPU, simpleCPU, specialproposeReg</div></div>
+  <div class="stat ext"><div class="label">Neue Dateien</div><div class="value">19</div><div class="note">16 Java, 3 Assembler</div></div>
+</div>
+
+<h3>Wie die Abgrenzung ermittelt wurde</h3>
+<p>Grundlage ist die Git-Historie. Als Originalstand gilt der Inhalt von Commit <code>9b2462d</code> (HEAD vor
+Beginn der Erweiterung). Alles, was im Arbeitsverzeichnis gegenüber diesem Stand neu hinzugekommen oder geändert
+ist, gehört zur Erweiterung. Bei geänderten Dateien wurden die Zeilen mit <code>git diff --numstat</code>
+ausgezählt: „erhalten“ sind Originalzeilen, die unverändert geblieben sind, „ergänzt“ sind neu hinzugekommene
+Zeilen.</p>
+<p class="meta">Hinweis: Das Commit-Datum (2025) weicht vom Entstehungsjahr (2018) ab, weil der Code erst
+nachträglich in das Repository aufgenommen wurde.</p>
+
+<figure>
+  <div class="legend"><span><i class="sw orig"></i>Original 2018</span><span><i class="sw ext"></i>Erweiterung 2026</span></div>
+  <svg viewBox="0 0 860 360" role="img" aria-labelledby="locTitle">
+    <title id="locTitle">Java-Codezeilen je Paket, aufgeteilt nach Herkunft</title>
+    <!-- Gitternetz -->
+    <g>
+      <line class="grid" x1="120" y1="20" x2="120" y2="326"/>
+      <line class="grid" x1="233.3" y1="20" x2="233.3" y2="326"/>
+      <line class="grid" x1="346.7" y1="20" x2="346.7" y2="326"/>
+      <line class="grid" x1="460" y1="20" x2="460" y2="326"/>
+      <line class="grid" x1="573.3" y1="20" x2="573.3" y2="326"/>
+      <line class="grid" x1="686.7" y1="20" x2="686.7" y2="326"/>
+      <line class="grid" x1="800" y1="20" x2="800" y2="326"/>
+      <line class="axis" x1="120" y1="20" x2="120" y2="326"/>
+      <text class="ts" x="120" y="344" text-anchor="middle">0</text>
+      <text class="ts" x="233.3" y="344" text-anchor="middle">100</text>
+      <text class="ts" x="346.7" y="344" text-anchor="middle">200</text>
+      <text class="ts" x="460" y="344" text-anchor="middle">300</text>
+      <text class="ts" x="573.3" y="344" text-anchor="middle">400</text>
+      <text class="ts" x="686.7" y="344" text-anchor="middle">500</text>
+      <text class="ts" x="800" y="344" text-anchor="middle">600 Zeilen</text>
+    </g>
+    <!-- Kategorien -->
+    <g text-anchor="end">
+      <text class="t" x="110" y="41">assembler</text>
+      <text class="t" x="110" y="75">CPU</text>
+      <text class="t" x="110" y="109">loader</text>
+      <text class="t" x="110" y="143">memory</text>
+      <text class="t" x="110" y="177">accelerator</text>
+      <text class="t" x="110" y="211">bus</text>
+      <text class="t" x="110" y="245">export</text>
+      <text class="t" x="110" y="279">selftest</text>
+      <text class="t" x="110" y="313">Main</text>
+    </g>
+    <!-- Balken -->
+    <path class="m-ext" data-tip="assembler – Erweiterung: 557 Zeilen" d="M120 27 h627.3 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-627.3 z"/>
+    <rect class="m-orig" data-tip="CPU – Original 2018: 159 Zeilen" x="120" y="61" width="180.2" height="20"/>
+    <path class="m-ext" data-tip="CPU – Erweiterung: 281 Zeilen" d="M302.2 61 h314.5 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-314.5 z"/>
+    <rect class="m-orig" data-tip="loader – Original 2018: 61 Zeilen" x="120" y="95" width="69.1" height="20"/>
+    <path class="m-ext" data-tip="loader – Erweiterung: 204 Zeilen" d="M191.1 95 h227.2 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-227.2 z"/>
+    <rect class="m-orig" data-tip="memory – Original 2018: 114 Zeilen" x="120" y="129" width="129.2" height="20"/>
+    <path class="m-ext" data-tip="memory – Erweiterung: 66 Zeilen" d="M251.2 129 h70.8 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-70.8 z"/>
+    <path class="m-ext" data-tip="accelerator – Erweiterung: 173 Zeilen" d="M120 163 h192.1 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-192.1 z"/>
+    <path class="m-ext" data-tip="bus – Erweiterung: 158 Zeilen" d="M120 197 h175.1 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-175.1 z"/>
+    <path class="m-ext" data-tip="export – Erweiterung: 153 Zeilen" d="M120 231 h169.4 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-169.4 z"/>
+    <path class="m-ext" data-tip="selftest – Erweiterung: 138 Zeilen" d="M120 265 h152.4 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-152.4 z"/>
+    <rect class="m-orig" data-tip="Main – Original 2018: 9 Zeilen" x="120" y="299" width="10.2" height="20"/>
+    <rect class="m-ext" data-tip="Main – Erweiterung: 6 Zeilen" x="132.2" y="299" width="6.8" height="20" rx="2"/>
+    <!-- Werte -->
+    <g class="ts">
+      <text class="t" x="757.3" y="41">557</text>
+      <text class="t" x="626.7" y="75">440</text>
+      <text class="t" x="428.3" y="109">265</text>
+      <text class="t" x="332" y="143">180</text>
+      <text class="t" x="322" y="177">173</text>
+      <text class="t" x="305" y="211">158</text>
+      <text class="t" x="299" y="245">153</text>
+      <text class="t" x="282" y="279">138</text>
+      <text class="t" x="145" y="313">15</text>
+    </g>
+  </svg>
+  <figcaption><b>Abbildung 1:</b> Java-Codezeilen je Paket im aktuellen Stand, aufgeteilt nach Herkunft. Die
+    Pakete <code>CPU</code>, <code>loader</code>, <code>memory</code> und <code>Main</code> enthalten beides.</figcaption>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Paket</th><th class="num">Original 2018</th><th class="num">Erweiterung 2026</th><th class="num">Summe</th></tr></thead>
+      <tbody>
+        <tr><td>assembler</td><td class="num">0</td><td class="num">557</td><td class="num">557</td></tr>
+        <tr><td>CPU</td><td class="num">159</td><td class="num">281</td><td class="num">440</td></tr>
+        <tr><td>loader</td><td class="num">61</td><td class="num">204</td><td class="num">265</td></tr>
+        <tr><td>memory</td><td class="num">114</td><td class="num">66</td><td class="num">180</td></tr>
+        <tr><td>accelerator</td><td class="num">0</td><td class="num">173</td><td class="num">173</td></tr>
+        <tr><td>bus</td><td class="num">0</td><td class="num">158</td><td class="num">158</td></tr>
+        <tr><td>export</td><td class="num">0</td><td class="num">153</td><td class="num">153</td></tr>
+        <tr><td>selftest</td><td class="num">0</td><td class="num">138</td><td class="num">138</td></tr>
+        <tr><td>Main (Standardpaket)</td><td class="num">9</td><td class="num">6</td><td class="num">15</td></tr>
+        <tr><th>Gesamt</th><th class="num">343</th><th class="num">1&nbsp;736</th><th class="num">2&nbsp;079</th></tr>
+      </tbody>
+    </table>
+  </div>
+</figure>
+
+<h3>Änderungen an Dateien aus 2018</h3>
+<p>Vier Originaldateien wurden angepasst. Die folgende Tabelle beschreibt, was dabei vom Original stammt und
+was ergänzt wurde.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Datei</th><th class="num">erhalten</th><th class="num">ergänzt</th><th>Original 2018</th><th>Erweiterung 2026</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>loader/Loader.java</code> <span class="badge mix">gemischt</span></td>
+      <td class="num">61</td><td class="num">204</td>
+      <td>Menüführung (Testmodus, CPU-Auswahl, Dateiname), ANSI-Farbausgabe, Laden aus dem Klassenpfad unter
+        <code>Programm/</code>, Entfernen von Kommentaren und Leerzeilen, Testmodus-Ausgabe. Der Menüpunkt 2
+        „CPU mit Coprozessor“ war bereits als Platzhalter vorgesehen.</td>
+      <td>Menüpunkt 2 startet den cristian1604-MIPS mit Bus und Beschleuniger; Abfrage von Latenz und
+        Nachkommabits; Hex-Ausgabe und Export; Kommandozeilenmodus <code>runBatch</code>; zusätzliche Suche im
+        Dateisystem; Auslagerung von Einlesen und Kommentarentfernung in Methoden.</td>
+    </tr>
+    <tr>
+      <td><code>CPU/AbstractCPU.java</code> <span class="badge mix">gemischt</span></td>
+      <td class="num">12</td><td class="num">17</td>
+      <td>Klassengerüst mit dem Kommentar „Gemeinsame Methoden (optional)“.</td>
+      <td>Hilfsmethoden <code>intToBits</code>/<code>bitsToInt</code>. Ihre Logik entspricht den privaten
+        Methoden aus <code>simpleCPU</code> (2018) und wurde zur Wiederverwendung hierher übertragen.</td>
+    </tr>
+    <tr>
+      <td><code>memory/Register.java</code> <span class="badge mix">gemischt</span></td>
+      <td class="num">110</td><td class="num">2</td>
+      <td>Komplettes Registerfeld mit Bit-Arrays, Schutz von <code>$0</code>, farbige Ausgabe.</td>
+      <td>Registerausgabe zeigt zusätzlich den Hex-Wert.</td>
+    </tr>
+    <tr>
+      <td><code>Main.java</code> <span class="badge mix">gemischt</span></td>
+      <td class="num">9</td><td class="num">6</td>
+      <td>Einstiegspunkt, der den Loader startet.</td>
+      <td>Mit Programmargumenten wird der Kommandozeilenmodus gestartet.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p class="meta">Kleine redaktionelle Änderungen des Autors außerhalb der Erweiterung: Entfernen der
+IntelliJ-Vorlagenkommentare in <code>Main.java</code> und zweier Leerzeilen in <code>AbstractCPU.java</code>.</p>
+
+<h3>Was die Erweiterung vom Original wiederverwendet</h3>
+<ul>
+  <li><b>Schnittstelle <code>CPU</code></b> und <b>Basisklasse <code>AbstractCPU</code></b> – die neue CPU fügt sich
+    in die vorhandene Architektur ein, wie es 2018 vorgesehen war.</li>
+  <li><b>Registerfeld <code>memory.Register</code></b> – die neue CPU speichert ihre Register in derselben
+    Bit-Array-Struktur und nutzt dieselbe Ausgabe.</li>
+  <li><b>Menü des Loaders</b> – der 2018 angelegte Platzhalter „CPU mit Coprozessor“ wurde mit der neuen CPU
+    gefüllt.</li>
+  <li><b>Programmverzeichnis <code>src/Programm/</code></b> und das Laden über den Klassenpfad.</li>
+</ul>
+
+<!-- ============================================================ 2 -->
+<h2 id="ueberblick">2 Systemüberblick</h2>
+<p>Abbildung 2 zeigt alle Pakete und Klassen mit ihrer Herkunft. Die Originalklassen bilden weiterhin einen
+eigenständigen, lauffähigen Lern-Emulator (Menüpunkt 1). Die Erweiterung ergänzt einen zweiten, unabhängigen
+Ausführungspfad (Menüpunkt 2), der auf Maschinencode-Ebene arbeitet.</p>
+
+<figure>
+  <svg viewBox="0 0 880 400" role="img" aria-labelledby="pkgTitle">
+    <title id="pkgTitle">Pakete und Klassen nach Herkunft</title>
+    <!-- Einstieg -->
+    <rect class="f-frame" x="10" y="10" width="200" height="150" rx="10"/>
+    <text class="tb" x="24" y="32">Einstieg</text>
+    <rect class="f-mix" x="25" y="45" width="170" height="34" rx="6"/><text class="t" x="110" y="67" text-anchor="middle">Main</text>
+    <rect class="f-mix" x="25" y="95" width="170" height="34" rx="6"/><text class="t" x="110" y="117" text-anchor="middle">loader.Loader</text>
+    <!-- CPU -->
+    <rect class="f-frame" x="225" y="10" width="355" height="150" rx="10"/>
+    <text class="tb" x="239" y="32">Paket CPU</text>
+    <rect class="f-orig" x="240" y="45" width="100" height="34" rx="6"/><text class="t" x="290" y="67" text-anchor="middle">CPU</text>
+    <rect class="f-mix" x="350" y="45" width="110" height="34" rx="6"/><text class="t" x="405" y="67" text-anchor="middle">AbstractCPU</text>
+    <rect class="f-orig" x="470" y="45" width="100" height="34" rx="6"/><text class="t" x="520" y="67" text-anchor="middle">simpleCPU</text>
+    <rect class="f-ext" x="240" y="95" width="160" height="34" rx="6"/><text class="t" x="320" y="117" text-anchor="middle">Cristian1604CPU</text>
+    <rect class="f-ext" x="410" y="95" width="160" height="34" rx="6"/><text class="t" x="490" y="117" text-anchor="middle">SimulationException</text>
+    <!-- memory -->
+    <rect class="f-frame" x="595" y="10" width="275" height="150" rx="10"/>
+    <text class="tb" x="609" y="32">Paket memory</text>
+    <rect class="f-mix" x="610" y="45" width="105" height="34" rx="6"/><text class="t" x="662.5" y="67" text-anchor="middle">Register</text>
+    <rect class="f-orig" x="723" y="45" width="137" height="34" rx="6"/><text class="t" x="791.5" y="67" text-anchor="middle">specialproposeReg</text>
+    <rect class="f-ext" x="610" y="95" width="120" height="34" rx="6"/><text class="t" x="670" y="117" text-anchor="middle">DataMemory</text>
+    <!-- neue Pakete -->
+    <rect class="f-ext" x="10" y="180" width="205" height="90" rx="10"/>
+    <text class="tb" x="24" y="202">Paket assembler</text>
+    <text class="ts" x="24" y="222">Assembler · Isa · Program</text>
+    <text class="ts" x="24" y="238">AssembledInstruction</text>
+    <text class="ts" x="24" y="254">AssemblerException</text>
+    <rect class="f-ext" x="225" y="180" width="205" height="90" rx="10"/>
+    <text class="tb" x="239" y="202">Paket bus</text>
+    <text class="ts" x="239" y="222">Bus · BusDevice · MemoryMap</text>
+    <text class="ts" x="239" y="238">BusTransaction · BusException</text>
+    <rect class="f-ext" x="440" y="180" width="140" height="90" rx="10"/>
+    <text class="tb" x="454" y="202">accelerator</text>
+    <text class="ts" x="454" y="222">ComplexMultiplier</text>
+    <rect class="f-ext" x="590" y="180" width="135" height="90" rx="10"/>
+    <text class="tb" x="604" y="202">export</text>
+    <text class="ts" x="604" y="222">HexExporter</text>
+    <rect class="f-ext" x="735" y="180" width="135" height="90" rx="10"/>
+    <text class="tb" x="749" y="202">selftest</text>
+    <text class="ts" x="749" y="222">SelfTest</text>
+    <!-- Programme -->
+    <rect class="f-frame" x="10" y="290" width="860" height="62" rx="10"/>
+    <text class="tb" x="24" y="312">Assemblerprogramme (src/Programm)</text>
+    <rect class="f-orig" x="24" y="320" width="380" height="24" rx="6"/><text class="ts" x="34" y="336">kleine.asm · test.asm · test2.asm · testit.ams</text>
+    <rect class="f-ext" x="414" y="320" width="440" height="24" rx="6"/><text class="ts" x="424" y="336">complex_mul_acc.asm · complex_mul_sw.asm · cristian_beispiel.asm</text>
+    <!-- Legende -->
+    <rect class="f-orig" x="10" y="370" width="16" height="16" rx="3"/><text class="ts" x="32" y="383">Original 2018</text>
+    <rect class="f-ext" x="140" y="370" width="16" height="16" rx="3"/><text class="ts" x="162" y="383">Erweiterung 2026</text>
+    <rect class="f-mix" x="290" y="370" width="16" height="16" rx="3"/><text class="ts" x="312" y="383">Originaldatei, erweitert</text>
+  </svg>
+  <figcaption><b>Abbildung 2:</b> Paketübersicht mit Herkunftskennzeichnung.</figcaption>
+</figure>
+
+<!-- ============================================================ 3 -->
+<h2 id="original">3 Die Originalimplementierung von 2018 <span class="badge orig">Original 2018</span></h2>
+
+<div class="callout orig">
+  <p>Dieses Kapitel beschreibt ausschließlich den händisch geschriebenen Stand von 2018. Der Code ist
+  unverändert weiterhin enthalten und über Menüpunkt 1 („Standard CPU“) nutzbar.</p>
+</div>
+
+<h3>Zielsetzung</h3>
+<p>Der Emulator sollte möglichst schnell eine funktionsfähige MIPS-Emulation bereitstellen, die sich auch
+Anfängerinnen und Anfängern mit wenig Java-Erfahrung erschließt. Vorbild war MARS, wobei bewusst ein
+einfacheres Modell gewählt wurde: Der Emulator interpretiert die Assemblerzeilen direkt als Text, statt sie in
+Maschinencode zu übersetzen.</p>
+
+<h3>Ablauf</h3>
+<figure>
+  <svg viewBox="0 0 880 250" role="img" aria-labelledby="origFlowTitle">
+    <title id="origFlowTitle">Programmablauf der Originalimplementierung</title>
+    <!-- Zeile 1: Loader -->
+    <text class="tb" x="10" y="20">Loader.load()</text>
+    <rect class="f-orig" x="10" y="32" width="150" height="50" rx="8"/><text class="t" x="85" y="54" text-anchor="middle">Testmodus?</text><text class="ts" x="85" y="70" text-anchor="middle">(j/n)</text>
+    <rect class="f-orig" x="185" y="32" width="150" height="50" rx="8"/><text class="t" x="260" y="54" text-anchor="middle">CPU-Auswahl</text><text class="ts" x="260" y="70" text-anchor="middle">1 = simpleCPU</text>
+    <rect class="f-orig" x="360" y="32" width="160" height="50" rx="8"/><text class="t" x="440" y="54" text-anchor="middle">Datei laden</text><text class="ts" x="440" y="70" text-anchor="middle">Klassenpfad Programm/</text>
+    <rect class="f-orig" x="545" y="32" width="160" height="50" rx="8"/><text class="t" x="625" y="54" text-anchor="middle">Kommentare und</text><text class="t" x="625" y="70" text-anchor="middle">Leerzeilen entfernen</text>
+    <rect class="f-orig" x="730" y="32" width="140" height="50" rx="8"/><text class="t" x="800" y="54" text-anchor="middle">cpu.run(</text><text class="t" x="800" y="70" text-anchor="middle">Zeilenliste)</text>
+    <path class="ln" d="M160 57 H183" marker-end="url(#arr)"/>
+    <path class="ln" d="M335 57 H358" marker-end="url(#arr)"/>
+    <path class="ln" d="M520 57 H543" marker-end="url(#arr)"/>
+    <path class="ln" d="M705 57 H728" marker-end="url(#arr)"/>
+    <!-- Zeile 2: simpleCPU -->
+    <text class="tb" x="10" y="128">simpleCPU.run()</text>
+    <rect class="f-orig" x="730" y="140" width="140" height="50" rx="8"/><text class="t" x="800" y="162" text-anchor="middle">pc &lt; Zeilen-</text><text class="t" x="800" y="178" text-anchor="middle">anzahl?</text>
+    <rect class="f-orig" x="545" y="140" width="160" height="50" rx="8"/><text class="t" x="625" y="162" text-anchor="middle">Zeile zerlegen</text><text class="ts" x="625" y="178" text-anchor="middle">split(Leerzeichen, Komma)</text>
+    <rect class="f-orig" x="360" y="140" width="160" height="50" rx="8"/><text class="t" x="440" y="162" text-anchor="middle">switch(opcode)</text><text class="ts" x="440" y="178" text-anchor="middle">Register als Bit-Arrays</text>
+    <rect class="f-orig" x="185" y="140" width="150" height="50" rx="8"/><text class="t" x="260" y="162" text-anchor="middle">pc++ oder</text><text class="t" x="260" y="178" text-anchor="middle">Sprung</text>
+    <rect class="f-orig" x="730" y="208" width="140" height="34" rx="8"/><text class="t" x="800" y="230" text-anchor="middle">Register ausgeben</text>
+    <path class="ln" d="M800 82 V138" marker-end="url(#arr)"/>
+    <path class="ln" d="M730 165 H707" marker-end="url(#arr)"/><text class="ts" x="712" y="158">ja</text>
+    <path class="ln" d="M545 165 H522" marker-end="url(#arr)"/>
+    <path class="ln" d="M360 165 H337" marker-end="url(#arr)"/>
+    <path class="ln" d="M185 165 H150 V118 H760 V138" marker-end="url(#arr)"/>
+    <path class="ln" d="M800 190 V206" marker-end="url(#arr)"/><text class="ts" x="808" y="202">nein</text>
+  </svg>
+  <figcaption><b>Abbildung 3:</b> Ablauf der Originalimplementierung. Jede Zeile wird bei jeder Ausführung erneut
+    als Text zerlegt und interpretiert.</figcaption>
+</figure>
+
+<h3>Komponenten</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Klasse</th><th>Aufgabe</th></tr></thead>
+  <tbody>
+    <tr><td><code>Main</code></td><td>Einstiegspunkt, startet den Loader.</td></tr>
+    <tr><td><code>loader.Loader</code></td><td>Konsolenmenü (Testmodus, CPU-Wahl, Dateiname), liest die Datei aus
+      dem Klassenpfad unter <code>Programm/</code>, entfernt Kommentare (<code>#</code>) und Leerzeilen, übergibt die
+      Zeilen an die CPU und gibt im Testmodus die gelesenen Instruktionen in Orange aus.</td></tr>
+    <tr><td><code>CPU.CPU</code></td><td>Schnittstelle mit der Methode <code>run(List&lt;String&gt;)</code>.</td></tr>
+    <tr><td><code>CPU.AbstractCPU</code></td><td>Vorgesehene Basisklasse für gemeinsame Methoden (2018 noch leer).</td></tr>
+    <tr><td><code>CPU.simpleCPU</code></td><td>Interpretiert die Textzeilen: Programmzähler als Zeilenindex,
+      Befehle per <code>switch</code>, Speicher als <code>HashMap&lt;Integer,Integer&gt;</code>.</td></tr>
+    <tr><td><code>memory.Register</code></td><td>32 Register zu je 32 Bit, gespeichert als <code>int[32][32]</code>
+      (MSB an Index 0). <code>$0</code> ist schreibgeschützt; Ausgabe binär (grün) und dezimal.</td></tr>
+    <tr><td><code>memory.specialproposeReg</code></td><td>Platzhalter für Spezialregister (leer).</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Befehlsumfang und Semantik</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Befehl</th><th>Semantik in <code>simpleCPU</code></th></tr></thead>
+  <tbody>
+    <tr><td><code>add, sub, and, or, slt</code></td><td>Registeroperationen <code>rd = rs ∘ rt</code></td></tr>
+    <tr><td><code>addi rt, rs, imm</code></td><td><code>rt = rs + imm</code> (Dezimalzahl)</td></tr>
+    <tr><td><code>lw / sw rt, off(rs)</code></td><td>Zugriff auf die HashMap mit Schlüssel <code>rs + off</code></td></tr>
+    <tr><td><code>beq / bne rs, rt, n</code></td><td>bei Erfüllung <code>pc = pc + n</code> (Sprung um <i>n</i> Zeilen ab der aktuellen Zeile)</td></tr>
+    <tr><td><code>j n</code></td><td><code>pc = n</code> (Zeilenindex)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Register werden ausschließlich numerisch angegeben (<code>$5</code>). Labels gibt es nicht; Sprungziele
+werden als Zeilenzahlen nach dem Entfernen von Kommentaren und Leerzeilen angegeben.</p>
+
+<h3>Stärken und Grenzen</h3>
+<div class="split">
+  <div class="card orig">
+    <h4>Stärken</h4>
+    <ul>
+      <li>Sehr kompakt (139 Zeilen CPU) und direkt nachvollziehbar</li>
+      <li>Register als Bit-Arrays machen die Binärdarstellung sichtbar – didaktisch wertvoll</li>
+      <li>Saubere Trennung von Loader, CPU-Schnittstelle und Registerfeld; die Erweiterung konnte an diese
+        Struktur andocken</li>
+      <li>Testmodus und farbige Ausgabe erleichtern das Nachvollziehen</li>
+    </ul>
+  </div>
+  <div class="card orig">
+    <h4>Grenzen (Anlass für die Erweiterung)</h4>
+    <ul>
+      <li>Kein Maschinencode – ein Hex-Export für Hardware ist nicht möglich</li>
+      <li>Sprungsemantik weicht von MIPS ab (Zeilen statt Wörter relativ zu PC+4)</li>
+      <li>Keine Labels, keine symbolischen Registernamen</li>
+      <li>Fehler werden gemeldet, die Ausführung läuft aber weiter</li>
+      <li>Keine Peripherie bzw. kein Bus, kein Taktmodell</li>
+      <li>Keine Begrenzung der Zyklen: <code>kleine.asm</code> gerät durch <code>j 2</code> (zurück zu
+        <code>slt</code>) in eine Endlosschleife</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ 4 -->
+<h2 id="ziel">4 Zielplattform cristian1604/mips <span class="badge ext">Erweiterung 2026</span></h2>
+
+<p>Als Ziel-CPU für die Bachelorarbeit dient der Single-Cycle-MIPS von Cristian Bottazzi
+(<a href="https://github.com/cristian1604/mips">github.com/cristian1604/mips</a>, VHDL, GPL-3.0). Er folgt dem
+Entwurf aus Harris &amp; Harris, <i>Digital Design and Computer Architecture</i>. Die Erweiterung des Emulators
+bildet diesen Prozessor nach. Grundlage dafür war die Analyse der VHDL-Quellen.</p>
+
+<figure>
+  <svg viewBox="0 0 880 330" role="img" aria-labelledby="sysTitle">
+    <title id="sysTitle">Zielsystem und Abbildung auf Java-Klassen</title>
+    <rect class="f-frame" x="10" y="10" width="860" height="150" rx="10"/>
+    <text class="tb" x="24" y="32">cristian1604-MIPS (Entity MIPS, DataPath.vhd) – Single-Cycle</text>
+    <rect class="f-box" x="24" y="46" width="120" height="46" rx="6"/><text class="t" x="84" y="66" text-anchor="middle">PC</text><text class="tms" x="84" y="82" text-anchor="middle">Reset → 0</text>
+    <rect class="f-box" x="160" y="46" width="160" height="46" rx="6"/><text class="t" x="240" y="66" text-anchor="middle">Instruction_Memory</text><text class="tms" x="240" y="82" text-anchor="middle">512 Byte, Hex-Tupel</text>
+    <rect class="f-box" x="336" y="46" width="150" height="46" rx="6"/><text class="t" x="411" y="66" text-anchor="middle">ControlUnit</text><text class="tms" x="411" y="82" text-anchor="middle">Main-/ALUdecoder</text>
+    <rect class="f-box" x="502" y="46" width="150" height="46" rx="6"/><text class="t" x="577" y="66" text-anchor="middle">Register_File</text><text class="tms" x="577" y="82" text-anchor="middle">32 × 32 Bit</text>
+    <rect class="f-box" x="668" y="46" width="190" height="46" rx="6"/><text class="t" x="763" y="66" text-anchor="middle">ALU + SignExtend</text><text class="tms" x="763" y="82" text-anchor="middle">and/or/add/sub/slt</text>
+    <!-- Java-Abbildung -->
+    <text class="ts" x="84" y="110" text-anchor="middle">execute()</text>
+    <text class="ts" x="240" y="110" text-anchor="middle">Program</text>
+    <text class="ts" x="411" y="110" text-anchor="middle">step()</text>
+    <text class="ts" x="577" y="110" text-anchor="middle">memory.Register (2018)</text>
+    <text class="ts" x="763" y="110" text-anchor="middle">alu()</text>
+    <text class="ts" x="24" y="140">Ports nach außen:</text>
+    <text class="tm" x="130" y="140">address[31:0]   writedata[31:0]   memwrite   readdata[31:0]</text>
+    <!-- Bus -->
+    <path class="ln" d="M200 160 V200"/><path class="ln" d="M360 160 V200"/><path class="ln" d="M500 160 V200"/><path class="ln" d="M640 200 V160" marker-end="url(#arr)"/>
+    <rect class="f-ext" x="10" y="200" width="860" height="30" rx="6"/>
+    <text class="t" x="440" y="220" text-anchor="middle">Bus – Adressdekodierung und Lese-Multiplexer (bus.Bus)</text>
+    <path class="ln" d="M240 230 V256"/><path class="ln" d="M640 230 V256"/>
+    <rect class="f-ext" x="100" y="256" width="280" height="60" rx="8"/>
+    <text class="t" x="240" y="280" text-anchor="middle">Datenspeicher (RAM)</text><text class="tms" x="240" y="298" text-anchor="middle">0x0000–0x0FFF · memory.DataMemory</text>
+    <rect class="f-ext" x="500" y="256" width="280" height="60" rx="8"/>
+    <text class="t" x="640" y="280" text-anchor="middle">Beschleuniger CMUL</text><text class="tms" x="640" y="298" text-anchor="middle">0x7F00–0x7F1F · accelerator.ComplexMultiplier</text>
+  </svg>
+  <figcaption><b>Abbildung 4:</b> Zielsystem. Graue Blöcke sind Teile des cristian1604-Prozessors (VHDL), darunter
+    jeweils die Java-Klasse bzw. Methode, die den Block im Emulator nachbildet. Datenspeicher und Beschleuniger liegen
+    außerhalb des Prozessors am Bus.</figcaption>
+</figure>
+
+<h3>Befehlssatz der Hardware</h3>
+<p><code>MainDecoder.vhd</code> und <code>ALUdecoder.vhd</code> dekodieren nur die folgenden Befehle. Alles andere
+erzeugt in VHDL undefinierte Steuersignale (<code>"---"</code>).</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Befehl</th><th>Format</th><th>Opcode</th><th>Funct</th><th>Wirkung im Datenpfad</th></tr></thead>
+  <tbody>
+    <tr><td><code>add rd, rs, rt</code></td><td>R</td><td class="mono">0x00</td><td class="mono">0x20</td><td>rd = rs + rt (kein Überlauf-Trap)</td></tr>
+    <tr><td><code>sub rd, rs, rt</code></td><td>R</td><td class="mono">0x00</td><td class="mono">0x22</td><td>rd = rs − rt</td></tr>
+    <tr><td><code>and rd, rs, rt</code></td><td>R</td><td class="mono">0x00</td><td class="mono">0x24</td><td>rd = rs &amp; rt</td></tr>
+    <tr><td><code>or rd, rs, rt</code></td><td>R</td><td class="mono">0x00</td><td class="mono">0x25</td><td>rd = rs | rt</td></tr>
+    <tr><td><code>slt rd, rs, rt</code></td><td>R</td><td class="mono">0x00</td><td class="mono">0x2A</td><td>rd = Vorzeichenbit von (rs − rt)</td></tr>
+    <tr><td><code>addi rt, rs, imm</code></td><td>I</td><td class="mono">0x08</td><td>–</td><td>rt = rs + SignExt(imm)</td></tr>
+    <tr><td><code>lw rt, imm(rs)</code></td><td>I</td><td class="mono">0x23</td><td>–</td><td>rt = readdata, address = rs + SignExt(imm)</td></tr>
+    <tr><td><code>sw rt, imm(rs)</code></td><td>I</td><td class="mono">0x2B</td><td>–</td><td>writedata = rt, memwrite = 1</td></tr>
+    <tr><td><code>beq rs, rt, imm</code></td><td>I</td><td class="mono">0x04</td><td>–</td><td>falls rs − rt = 0: PC = PC + 4 + (SignExt(imm) &lt;&lt; 2)</td></tr>
+    <tr><td><code>j addr</code></td><td>J</td><td class="mono">0x02</td><td>–</td><td>PC = (PC + 4)[31:28] &amp; addr &amp; "00"</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Besonderheiten, die der Emulator nachbildet</h3>
+<ul>
+  <li><b>Textsegment ab Adresse 0.</b> <code>PC.vhd</code> setzt den PC beim Reset auf 0. MARS legt Programme ab
+    <code>0x00400000</code> ab und kodiert <code>j</code>-Befehle deshalb für diese CPU falsch (das README von
+    cristian1604 empfiehlt, <code>x"08",x"10"</code> von Hand durch <code>x"08",x"00"</code> zu ersetzen). Der
+    Emulator erzeugt direkt richtigen Code.</li>
+  <li><b><code>slt</code> ohne Überlaufkorrektur.</b> <code>ALU.vhd</code> liefert das Vorzeichenbit von
+    <code>a − b</code>. Läuft die Subtraktion über, ist das Ergebnis falsch. Der Emulator rechnet wie die Hardware
+    und gibt in diesem Fall eine Warnung aus.</li>
+  <li><b>Kein MemRead-Signal.</b> Am Port <code>address</code> liegt bei jedem Befehl das ALU-Ergebnis an.
+    Peripherie darf deshalb beim Lesen keinen Zustand ändern (siehe Kapitel 9).</li>
+  <li><b>Kein <code>lui</code>/<code>ori</code>.</b> Konstanten sind auf 16 Bit mit Vorzeichen begrenzt. Das
+    bestimmt die Wahl der Peripherie-Adressen (Kapitel 8).</li>
+  <li><b>Kein <code>nop</code> als Nullwort.</b> <code>0x00000000</code> (sll) kennt der ALUdecoder nicht; der
+    Pseudobefehl <code>nop</code> wird deshalb als <code>add $zero, $zero, $zero</code> (<code>0x00000020</code>)
+    kodiert.</li>
+  <li><b>Kein Halt-Befehl.</b> Programme enden mit einem Sprung auf sich selbst.</li>
+</ul>
+
+<!-- ============================================================ 5 -->
+<h2 id="kette">5 Verarbeitungskette der Erweiterung <span class="badge ext">Erweiterung 2026</span></h2>
+<p>Der zentrale Unterschied zur Originalimplementierung: Das Programm wird zuerst vollständig in 32-Bit-
+Maschinenwörter übersetzt, und die CPU führt <i>diese Wörter</i> aus. Dadurch ist garantiert, dass der exportierte
+Hex-Code exakt dem simulierten Programm entspricht. Der Export erfolgt nur, wenn die Simulation fehlerfrei
+abgeschlossen wurde.</p>
+
+<figure>
+  <svg viewBox="0 0 880 254" role="img" aria-labelledby="chainTitle">
+    <title id="chainTitle">Verarbeitungskette vom Quelltext zum Hex-Export</title>
+    <g transform="translate(0,24)">
+    <rect class="f-box" x="10" y="40" width="110" height="60" rx="8"/><text class="t" x="65" y="66" text-anchor="middle">.asm</text><text class="ts" x="65" y="84" text-anchor="middle">Quelltext</text>
+    <rect class="f-ext" x="150" y="40" width="130" height="60" rx="8"/><text class="t" x="215" y="66" text-anchor="middle">Assembler</text><text class="ts" x="215" y="84" text-anchor="middle">2 Pässe</text>
+    <rect class="f-ext" x="310" y="40" width="130" height="60" rx="8"/><text class="t" x="375" y="66" text-anchor="middle">Program</text><text class="ts" x="375" y="84" text-anchor="middle">Maschinenwörter</text>
+    <rect class="f-ext" x="470" y="40" width="160" height="60" rx="8"/><text class="t" x="550" y="66" text-anchor="middle">Cristian1604CPU</text><text class="ts" x="550" y="84" text-anchor="middle">+ Bus, RAM, CMUL</text>
+    <path class="f-ext" d="M720 30 L780 70 L720 110 L660 70 Z"/><text class="t" x="720" y="67" text-anchor="middle">erfolg-</text><text class="t" x="720" y="81" text-anchor="middle">reich?</text>
+    <rect class="f-ext" x="660" y="150" width="210" height="70" rx="8"/><text class="t" x="765" y="172" text-anchor="middle">HexExporter</text>
+    <text class="ts" x="765" y="190" text-anchor="middle">Konsole + export/</text><text class="ts" x="765" y="206" text-anchor="middle">VHDL · Hex · Bus-Trace · Ergebnis</text>
+    <rect class="f-box" x="800" y="40" width="70" height="60" rx="8"/><text class="ts" x="835" y="66" text-anchor="middle">Fehler,</text><text class="ts" x="835" y="82" text-anchor="middle">kein Export</text>
+    <path class="ln" d="M120 70 H148" marker-end="url(#arr)"/>
+    <path class="ln" d="M280 70 H308" marker-end="url(#arr)"/>
+    <path class="ln" d="M440 70 H468" marker-end="url(#arr)"/>
+    <path class="ln" d="M630 70 H658" marker-end="url(#arr)"/>
+    <path class="ln" d="M780 70 H798" marker-end="url(#arr)"/><text class="ts" x="790" y="60" text-anchor="middle">nein</text>
+    <path class="ln" d="M720 110 V148" marker-end="url(#arr)"/><text class="ts" x="728" y="134">ja</text>
+    <path class="ln" d="M215 40 V-4 H835 V38" marker-end="url(#arr)"/>
+    <path class="ln" d="M550 40 V-4"/>
+    <text class="ts" x="225" y="-10">Assemblerfehler (mit Zeilennummer)</text>
+    <text class="ts" x="560" y="-10">Busfehler, unbekannter Opcode, Zyklenlimit</text>
+    </g>
+  </svg>
+  <figcaption><b>Abbildung 5:</b> Verarbeitungskette. Assemblerfehler und Laufzeitfehler führen dazu, dass kein
+    Hex-Code ausgegeben wird.</figcaption>
+</figure>
+
+<!-- ============================================================ 6 -->
+<h2 id="assembler">6 Assembler <span class="badge ext">Erweiterung 2026</span></h2>
+
+<h3>Zwei-Pass-Verfahren</h3>
+<p><code>assembler.Assembler</code> arbeitet in zwei Durchläufen:</p>
+<ol>
+  <li><b>Pass 1</b> entfernt Kommentare, sammelt Labels und <code>.eqv</code>-Konstanten und vergibt jeder
+    Anweisung ihre Adresse. Pseudobefehle, die zu mehreren Maschinenbefehlen werden (<code>bne</code>), belegen
+    entsprechend mehr Platz.</li>
+  <li><b>Pass 2</b> kodiert jede Anweisung. Weil alle Labels bekannt sind, sind auch Vorwärtssprünge möglich.</li>
+</ol>
+<p>Fehler werden nicht beim ersten Auftreten abgebrochen, sondern mit Zeilennummer gesammelt und gemeinsam
+ausgegeben. Die Klasse <code>Isa</code> enthält die Opcodes, Funct-Codes und Registernamen sowie einen
+Disassembler, der Maschinenwörter in wieder einlesbare Assembler-Syntax zurückübersetzt.</p>
+
+<h3>Befehlsformate</h3>
+<figure>
+  <svg viewBox="0 0 880 270" role="img" aria-labelledby="fmtTitle">
+    <title id="fmtTitle">MIPS-Befehlsformate R, I und J mit Beispielkodierung</title>
+    <!-- Bitskala: 32 Bit von x=120 bis x=856, 23 px je Bit -->
+    <text class="ts" x="120" y="18">31</text><text class="ts" x="852" y="18" text-anchor="end">0</text>
+    <!-- R -->
+    <text class="tb" x="10" y="52">R-Format</text>
+    <rect class="f-ext" x="120" y="32" width="138" height="32"/><text class="t" x="189" y="53" text-anchor="middle">op (6)</text>
+    <rect class="f-ext" x="258" y="32" width="115" height="32"/><text class="t" x="315.5" y="53" text-anchor="middle">rs (5)</text>
+    <rect class="f-ext" x="373" y="32" width="115" height="32"/><text class="t" x="430.5" y="53" text-anchor="middle">rt (5)</text>
+    <rect class="f-ext" x="488" y="32" width="115" height="32"/><text class="t" x="545.5" y="53" text-anchor="middle">rd (5)</text>
+    <rect class="f-ext" x="603" y="32" width="115" height="32"/><text class="t" x="660.5" y="53" text-anchor="middle">shamt (5)</text>
+    <rect class="f-ext" x="718" y="32" width="138" height="32"/><text class="t" x="787" y="53" text-anchor="middle">funct (6)</text>
+    <!-- I -->
+    <text class="tb" x="10" y="102">I-Format</text>
+    <rect class="f-ext" x="120" y="82" width="138" height="32"/><text class="t" x="189" y="103" text-anchor="middle">op (6)</text>
+    <rect class="f-ext" x="258" y="82" width="115" height="32"/><text class="t" x="315.5" y="103" text-anchor="middle">rs (5)</text>
+    <rect class="f-ext" x="373" y="82" width="115" height="32"/><text class="t" x="430.5" y="103" text-anchor="middle">rt (5)</text>
+    <rect class="f-ext" x="488" y="82" width="368" height="32"/><text class="t" x="672" y="103" text-anchor="middle">imm (16, mit Vorzeichen)</text>
+    <!-- J -->
+    <text class="tb" x="10" y="152">J-Format</text>
+    <rect class="f-ext" x="120" y="132" width="138" height="32"/><text class="t" x="189" y="153" text-anchor="middle">op (6)</text>
+    <rect class="f-ext" x="258" y="132" width="598" height="32"/><text class="t" x="557" y="153" text-anchor="middle">addr (26) = Zieladresse &gt;&gt; 2</text>
+    <!-- Beispiel -->
+    <text class="tb" x="10" y="202">Beispiel</text>
+    <text class="ts" x="10" y="218">addi $s1, $0, 6</text>
+    <rect class="f-box" x="120" y="182" width="138" height="32"/><text class="tm" x="189" y="203" text-anchor="middle">001000</text>
+    <rect class="f-box" x="258" y="182" width="115" height="32"/><text class="tm" x="315.5" y="203" text-anchor="middle">00000</text>
+    <rect class="f-box" x="373" y="182" width="115" height="32"/><text class="tm" x="430.5" y="203" text-anchor="middle">10001</text>
+    <rect class="f-box" x="488" y="182" width="368" height="32"/><text class="tm" x="672" y="203" text-anchor="middle">0000 0000 0000 0110</text>
+    <text class="ts" x="189" y="232" text-anchor="middle">addi = 0x08</text>
+    <text class="ts" x="315.5" y="232" text-anchor="middle">$zero = 0</text>
+    <text class="ts" x="430.5" y="232" text-anchor="middle">$s1 = 17</text>
+    <text class="ts" x="672" y="232" text-anchor="middle">6</text>
+    <text class="t" x="120" y="260">= 0x20110006 → VHDL: </text><text class="tm" x="290" y="260">x"20",x"11",x"00",x"06",</text>
+  </svg>
+  <figcaption><b>Abbildung 6:</b> Befehlsformate (Bitbreiten maßstäblich) und die Kodierung des ersten Befehls aus
+    dem Beispielprogramm von cristian1604. Der Emulator erzeugt exakt den dort angegebenen Hex-Code.</figcaption>
+</figure>
+
+<h3>Sprache</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Element</th><th>Syntax</th></tr></thead>
+  <tbody>
+    <tr><td>Kommentar</td><td><code># …</code></td></tr>
+    <tr><td>Label</td><td><code>name:</code>, auch vor einem Befehl in derselben Zeile</td></tr>
+    <tr><td>Register</td><td><code>$0</code> … <code>$31</code> oder <code>$zero, $at, $v0–$v1, $a0–$a3, $t0–$t9, $s0–$s7, $k0–$k1, $gp, $sp, $fp, $ra</code></td></tr>
+    <tr><td>Zahlen</td><td>dezimal, <code>0x…</code>, <code>0b…</code>; Ausdrücke mit <code>+</code> und <code>-</code></td></tr>
+    <tr><td>Konstanten</td><td><code>.eqv NAME WERT</code> (MARS-kompatibel)</td></tr>
+    <tr><td>Ignoriert</td><td><code>.text</code>, <code>.globl</code></td></tr>
+    <tr><td>Abgelehnt</td><td><code>.data</code> (Datenspeicher ist extern), alle Befehle außerhalb des Hardware-Befehlssatzes</td></tr>
+    <tr><td><code>beq</code>-Ziel</td><td>Label oder Zahl = Offset in Wörtern relativ zu PC + 4</td></tr>
+    <tr><td><code>j</code>-Ziel</td><td>Label oder Byte-Adresse</td></tr>
+    <tr><td>Immediate</td><td>−32 768 … 32 767</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Pseudobefehle</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Pseudobefehl</th><th>wird übersetzt in</th><th>Begründung</th></tr></thead>
+  <tbody>
+    <tr><td><code>nop</code></td><td><code>add $zero, $zero, $zero</code></td><td>Nullwort ist nicht dekodierbar</td></tr>
+    <tr><td><code>move rd, rs</code></td><td><code>add rd, rs, $zero</code></td><td>Komfort</td></tr>
+    <tr><td><code>li rt, imm16</code></td><td><code>addi rt, $zero, imm16</code></td><td>nur 16 Bit, kein <code>lui</code></td></tr>
+    <tr><td><code>b label</code></td><td><code>beq $zero, $zero, label</code></td><td>Komfort</td></tr>
+    <tr><td><code>bne rs, rt, label</code></td><td><code>beq rs, rt, 1</code> + <code>j label</code></td><td>Hardware hat kein <code>bne</code></td></tr>
+    <tr><td><code>halt</code></td><td><code>j</code> auf die eigene Adresse</td><td>Hardware hat keinen Halt-Befehl</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================================================ 7 -->
+<h2 id="cpu">7 CPU-Emulation <span class="badge ext">Erweiterung 2026</span></h2>
+<p><code>CPU.Cristian1604CPU</code> erbt von <code>AbstractCPU</code> und implementiert damit die Schnittstelle
+<code>CPU</code> aus 2018. Pro Takt wird ein Befehl ausgeführt:</p>
+<ol>
+  <li>Prüfen, ob der PC innerhalb des Programms liegt und das Zyklenlimit nicht erreicht ist</li>
+  <li>Maschinenwort holen und in die Felder <code>opcode, rs, rt, rd, funct, imm</code> zerlegen</li>
+  <li>Ausführen wie im Datenpfad: ALU-Operation, Speicherzugriff über den Bus oder Sprung</li>
+  <li>Taktflanke an alle Busgeräte (<code>bus.tick()</code>), Taktzähler erhöhen</li>
+  <li>Ist der nächste PC gleich dem aktuellen (Sprung auf sich selbst), endet die Simulation erfolgreich</li>
+</ol>
+
+<pre><code>case Isa.OP_BEQ:
+    // pcsrc = branch and zero; zero kommt aus der ALU-Subtraktion
+    if (readReg(rs) - readReg(rt) == 0) {
+        nextPc = pcPlus4 + (signImm &lt;&lt; 2);
+    }
+    break;
+case Isa.OP_J:
+    nextPc = (pcPlus4 &amp; 0xF0000000) | ((instr &amp; 0x03FFFFFF) &lt;&lt; 2);
+    break;</code></pre>
+
+<h3>Ausgaben</h3>
+<ul>
+  <li>Registerinhalte über <code>Register.printAllRegisters()</code> (2018, ergänzt um Hex)</li>
+  <li>Statistik: Takte, Anzahl je Befehl, Anzahl Buszugriffe, Art des Programmendes</li>
+  <li>Zustand aller Busgeräte (RAM-Inhalt, Register des Beschleunigers)</li>
+  <li>Warnungen, z. B. <code>slt</code>-Überlauf oder fehlendes <code>halt</code></li>
+  <li>Im Testmodus bzw. mit <code>--trace</code>: jeder Befehl mit Takt, PC, Maschinenwort, Disassemblat und
+    Buszugriffen</li>
+</ul>
+
+<h3>Fehlerbehandlung</h3>
+<p>Anders als in <code>simpleCPU</code> bricht jeder Fehler die Simulation ab: nicht ausgerichtete Zugriffe,
+Adressen ohne Gerät, Schreiben auf nur lesbare Register, nicht dekodierbare Befehle und das Erreichen des
+Zyklenlimits (Standard 1&nbsp;000&nbsp;000). Die Meldung enthält PC, Quellzeile und Ursache.</p>
+
+<!-- ============================================================ 8 -->
+<h2 id="bus">8 Bus und Speicherbelegung <span class="badge ext">Erweiterung 2026</span></h2>
+<p><code>bus.Bus</code> verbindet die CPU mit Geräten, die die Schnittstelle <code>BusDevice</code>
+implementieren. Der Bus dekodiert die Adresse, leitet den Zugriff mit dem Offset relativ zur Basisadresse an das
+Gerät weiter, protokolliert jede Transaktion (<code>BusTransaction</code>) und verteilt die Taktflanke.
+Überlappende Adressbereiche werden beim Anschließen abgewiesen.</p>
+
+<figure>
+  <svg viewBox="0 0 880 340" role="img" aria-labelledby="mapTitle">
+    <title id="mapTitle">Speicherbelegung des Datenbusses</title>
+    <text class="tb" x="40" y="20">Datenadressraum</text>
+    <rect class="f-ext" x="160" y="30" width="230" height="56"/><text class="t" x="275" y="54" text-anchor="middle">RAM, 4 KiB</text><text class="ts" x="275" y="72" text-anchor="middle">DataMemory</text>
+    <rect class="f-hatch" x="160" y="86" width="230" height="70"/><text class="ts" x="275" y="125" text-anchor="middle">nicht belegt → Busfehler</text>
+    <rect class="f-ext" x="160" y="156" width="230" height="40"/><text class="t" x="275" y="181" text-anchor="middle">CMUL, 8 Register</text>
+    <rect class="f-hatch" x="160" y="196" width="230" height="30"/>
+    <rect class="f-box" x="160" y="226" width="230" height="70"/><text class="ts" x="275" y="256" text-anchor="middle">ab 0x8000: nicht mit 16-Bit-</text><text class="ts" x="275" y="272" text-anchor="middle">Immediate erreichbar</text>
+    <g text-anchor="end">
+      <text class="tms" x="152" y="36">0x00000000</text>
+      <text class="tms" x="152" y="90">0x00001000</text>
+      <text class="tms" x="152" y="160">0x00007F00</text>
+      <text class="tms" x="152" y="200">0x00007F20</text>
+      <text class="tms" x="152" y="230">0x00008000</text>
+      <text class="tms" x="152" y="300">0xFFFFFFFF</text>
+    </g>
+    <!-- Zoom -->
+    <path class="ln" d="M390 156 L520 30"/><path class="ln" d="M390 196 L520 302"/>
+    <text class="tb" x="520" y="20">Register des Beschleunigers (Basis 0x7F00)</text>
+    <g>
+      <rect class="f-ext" x="520" y="30" width="340" height="34"/><text class="tm" x="530" y="51">+0x00  A_RE    R/W</text>
+      <rect class="f-ext" x="520" y="64" width="340" height="34"/><text class="tm" x="530" y="85">+0x04  A_IM    R/W</text>
+      <rect class="f-ext" x="520" y="98" width="340" height="34"/><text class="tm" x="530" y="119">+0x08  B_RE    R/W</text>
+      <rect class="f-ext" x="520" y="132" width="340" height="34"/><text class="tm" x="530" y="153">+0x0C  B_IM    R/W</text>
+      <rect class="f-ext" x="520" y="166" width="340" height="34"/><text class="tm" x="530" y="187">+0x10  CTRL    W    Bit 0 = Start</text>
+      <rect class="f-ext" x="520" y="200" width="340" height="34"/><text class="tm" x="530" y="221">+0x14  STATUS  R    1 = fertig</text>
+      <rect class="f-ext" x="520" y="234" width="340" height="34"/><text class="tm" x="530" y="255">+0x18  RES_RE  R</text>
+      <rect class="f-ext" x="520" y="268" width="340" height="34"/><text class="tm" x="530" y="289">+0x1C  RES_IM  R</text>
+    </g>
+    <text class="ts" x="40" y="326">Befehlsspeicher ist getrennt (Harvard): 512 Byte in Instruction_Memory.vhd, nicht über den Bus erreichbar.</text>
+  </svg>
+  <figcaption><b>Abbildung 7:</b> Speicherbelegung (nicht maßstäblich). Die Basisadressen stehen in
+    <code>bus/MemoryMap.java</code>.</figcaption>
+</figure>
+
+<h3>Wahl der Adressen</h3>
+<p>Da der Prozessor weder <code>lui</code> noch <code>ori</code> kennt, lassen sich Adressen nur über ein
+vorzeichenbehaftetes 16-Bit-Immediate bilden, z. B. <code>addi $s0, $zero, 0x7F00</code> oder direkt
+<code>lw $t0, 0x7F14($zero)</code>. Der Beschleuniger liegt deshalb unterhalb von <code>0x8000</code>.</p>
+
+<h3>Vorschlag für die Adressdekodierung in VHDL</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Signal</th><th>Bedingung</th></tr></thead>
+  <tbody>
+    <tr><td><code>ram_sel</code></td><td><code>address(31 downto 12) = x"00000"</code></td></tr>
+    <tr><td><code>acc_sel</code></td><td><code>address(31 downto 5) = 0x3F8</code> (entspricht <code>0x7F00–0x7F1F</code>)</td></tr>
+    <tr><td>Registerauswahl</td><td><code>address(4 downto 2)</code></td></tr>
+    <tr><td><code>readdata</code></td><td>Multiplexer: RAM-Daten bei <code>ram_sel</code>, Beschleunigerregister bei <code>acc_sel</code></td></tr>
+    <tr><td>Schreibfreigabe</td><td><code>memwrite and ram_sel</code> bzw. <code>memwrite and acc_sel</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================================================ 9 -->
+<h2 id="acc">9 Beschleuniger für komplexe Multiplikation <span class="badge ext">Erweiterung 2026</span></h2>
+<p><code>accelerator.ComplexMultiplier</code> ist das Verhaltensmodell („Golden Model“) des in der Bachelorarbeit
+zu entwickelnden Hardware-Beschleunigers. Er berechnet</p>
+<pre><code>(a_re + j·a_im) · (b_re + j·b_im)
+    = (a_re·b_re − a_im·b_im) + j·(a_re·b_im + a_im·b_re)</code></pre>
+
+<h3>Zustandsautomat</h3>
+<figure>
+  <svg viewBox="0 0 880 270" role="img" aria-labelledby="fsmTitle">
+    <title id="fsmTitle">Zustandsautomat des Beschleunigers</title>
+    <circle class="f-ext" cx="130" cy="140" r="50"/><text class="tb" x="130" y="137" text-anchor="middle">IDLE</text><text class="ts" x="130" y="155" text-anchor="middle">STATUS = 0</text>
+    <circle class="f-ext" cx="440" cy="140" r="50"/><text class="tb" x="440" y="137" text-anchor="middle">BUSY</text><text class="ts" x="440" y="155" text-anchor="middle">STATUS = 0</text>
+    <circle class="f-ext" cx="750" cy="140" r="50"/><text class="tb" x="750" y="137" text-anchor="middle">DONE</text><text class="ts" x="750" y="155" text-anchor="middle">STATUS = 1</text>
+    <path class="ln" d="M180 140 H388" marker-end="url(#arr)"/>
+    <text class="ts" x="284" y="122" text-anchor="middle">sw CTRL, Bit 0 = 1</text>
+    <text class="ts" x="284" y="160" text-anchor="middle">Operanden übernehmen, n := Latenz</text>
+    <path class="ln" d="M490 140 H698" marker-end="url(#arr)"/>
+    <text class="ts" x="594" y="122" text-anchor="middle">Takt, n = 1</text>
+    <text class="ts" x="594" y="160" text-anchor="middle">RES_RE/RES_IM setzen</text>
+    <path class="ln" d="M418 95 C 390 30, 490 30, 462 95" marker-end="url(#arr)"/>
+    <text class="ts" x="440" y="28" text-anchor="middle">Takt, n &gt; 1: n := n − 1 · Neustart bei erneutem Start</text>
+    <path class="ln" d="M720 180 C 650 250, 520 250, 465 185" marker-end="url(#arr)"/>
+    <text class="ts" x="592" y="252" text-anchor="middle">sw CTRL, Bit 0 = 1 (neue Berechnung)</text>
+  </svg>
+  <figcaption><b>Abbildung 8:</b> Zustände des Beschleunigers. Operandenregister können jederzeit beschrieben
+    werden; übernommen werden sie erst beim Start.</figcaption>
+</figure>
+
+<h3>Zeitverhalten am Bus</h3>
+<p>Abbildung 9 zeigt einen Ausschnitt aus der Simulation von <code>complex_mul_acc.asm</code> mit Latenz 4. Die
+Werte stammen aus dem exportierten Bus-Trace.</p>
+<figure>
+  <svg viewBox="0 0 880 360" role="img" aria-labelledby="timTitle">
+    <title id="timTitle">Zeitdiagramm eines Beschleunigeraufrufs</title>
+    <!-- Hervorhebungen -->
+    <rect class="hl" x="220" y="28" width="70" height="320"/>
+    <rect class="hl2" x="430" y="28" width="420" height="320"/>
+    <!-- Taktnummern -->
+    <g class="ts" text-anchor="middle">
+      <text class="ts" x="185" y="22">9</text><text class="ts" x="255" y="22">10</text><text class="ts" x="325" y="22">11</text>
+      <text class="ts" x="395" y="22">12</text><text class="ts" x="465" y="22">13</text><text class="ts" x="535" y="22">14</text>
+      <text class="ts" x="605" y="22">15</text><text class="ts" x="675" y="22">16</text><text class="ts" x="745" y="22">17</text>
+      <text class="ts" x="815" y="22">18</text>
+    </g>
+    <text class="ts" x="10" y="22">Takt</text>
+    <!-- Beschriftungen -->
+    <g>
+      <text class="t" x="10" y="57">clk</text>
+      <text class="t" x="10" y="102">Befehl</text>
+      <text class="t" x="10" y="147">memwrite</text>
+      <text class="t" x="10" y="192">address</text>
+      <text class="t" x="10" y="237">Restlatenz n</text>
+      <text class="t" x="10" y="282">STATUS</text>
+      <text class="t" x="10" y="327">readdata</text>
+    </g>
+    <!-- clk: steigende Flanke am Taktbeginn -->
+    <path class="ln-sig" d="M150 66 V40 H185 V66 H220 V40 H255 V66 H290 V40 H325 V66 H360 V40 H395 V66 H430 V40 H465 V66 H500 V40 H535 V66 H570 V40 H605 V66 H640 V40 H675 V66 H710 V40 H745 V66 H780 V40 H815 V66 H850"/>
+    <!-- Befehl (Bus-Darstellung) -->
+    <g>
+      <path class="f-box" d="M154 85 H216 L220 98 L216 111 H154 L150 98 Z"/><text class="tms" x="185" y="102" text-anchor="middle">addi</text>
+      <path class="f-ext" d="M224 85 H286 L290 98 L286 111 H224 L220 98 Z"/><text class="tms" x="255" y="102" text-anchor="middle">sw CTRL</text>
+      <path class="f-box" d="M294 85 H356 L360 98 L356 111 H294 L290 98 Z"/><text class="tms" x="325" y="102" text-anchor="middle">lw STAT</text>
+      <path class="f-box" d="M364 85 H426 L430 98 L426 111 H364 L360 98 Z"/><text class="tms" x="395" y="102" text-anchor="middle">beq</text>
+      <path class="f-box" d="M434 85 H496 L500 98 L496 111 H434 L430 98 Z"/><text class="tms" x="465" y="102" text-anchor="middle">lw STAT</text>
+      <path class="f-box" d="M504 85 H566 L570 98 L566 111 H504 L500 98 Z"/><text class="tms" x="535" y="102" text-anchor="middle">beq</text>
+      <path class="f-box" d="M574 85 H636 L640 98 L636 111 H574 L570 98 Z"/><text class="tms" x="605" y="102" text-anchor="middle">lw STAT</text>
+      <path class="f-box" d="M644 85 H706 L710 98 L706 111 H644 L640 98 Z"/><text class="tms" x="675" y="102" text-anchor="middle">beq</text>
+      <path class="f-box" d="M714 85 H776 L780 98 L776 111 H714 L710 98 Z"/><text class="tms" x="745" y="102" text-anchor="middle">lw RE</text>
+      <path class="f-box" d="M784 85 H846 L850 98 L846 111 H784 L780 98 Z"/><text class="tms" x="815" y="102" text-anchor="middle">lw IM</text>
+    </g>
+    <!-- memwrite -->
+    <path class="ln-sig" d="M150 156 H220 V130 H290 V156 H850"/>
+    <!-- address -->
+    <g>
+      <path class="f-hatch" d="M154 175 H216 L220 188 L216 201 H154 L150 188 Z"/>
+      <path class="f-box" d="M224 175 H286 L290 188 L286 201 H224 L220 188 Z"/><text class="tms" x="255" y="192" text-anchor="middle">7F10</text>
+      <path class="f-box" d="M294 175 H356 L360 188 L356 201 H294 L290 188 Z"/><text class="tms" x="325" y="192" text-anchor="middle">7F14</text>
+      <path class="f-hatch" d="M364 175 H426 L430 188 L426 201 H364 L360 188 Z"/>
+      <path class="f-box" d="M434 175 H496 L500 188 L496 201 H434 L430 188 Z"/><text class="tms" x="465" y="192" text-anchor="middle">7F14</text>
+      <path class="f-hatch" d="M504 175 H566 L570 188 L566 201 H504 L500 188 Z"/>
+      <path class="f-box" d="M574 175 H636 L640 188 L636 201 H574 L570 188 Z"/><text class="tms" x="605" y="192" text-anchor="middle">7F14</text>
+      <path class="f-hatch" d="M644 175 H706 L710 188 L706 201 H644 L640 188 Z"/>
+      <path class="f-box" d="M714 175 H776 L780 188 L776 201 H714 L710 188 Z"/><text class="tms" x="745" y="192" text-anchor="middle">7F18</text>
+      <path class="f-box" d="M784 175 H846 L850 188 L846 201 H784 L780 188 Z"/><text class="tms" x="815" y="192" text-anchor="middle">7F1C</text>
+    </g>
+    <!-- Restlatenz -->
+    <g>
+      <path class="f-box" d="M154 220 H286 L290 233 L286 246 H154 L150 233 Z"/><text class="tms" x="220" y="237" text-anchor="middle">0</text>
+      <path class="f-ext" d="M294 220 H356 L360 233 L356 246 H294 L290 233 Z"/><text class="tms" x="325" y="237" text-anchor="middle">3</text>
+      <path class="f-ext" d="M364 220 H426 L430 233 L426 246 H364 L360 233 Z"/><text class="tms" x="395" y="237" text-anchor="middle">2</text>
+      <path class="f-ext" d="M434 220 H496 L500 233 L496 246 H434 L430 233 Z"/><text class="tms" x="465" y="237" text-anchor="middle">1</text>
+      <path class="f-box" d="M504 220 H846 L850 233 L846 246 H504 L500 233 Z"/><text class="tms" x="675" y="237" text-anchor="middle">0</text>
+    </g>
+    <!-- STATUS -->
+    <path class="ln-sig" d="M150 291 H500 V265 H850"/>
+    <!-- readdata -->
+    <g>
+      <path class="f-hatch" d="M154 310 H286 L290 323 L286 336 H154 L150 323 Z"/>
+      <path class="f-box" d="M294 310 H356 L360 323 L356 336 H294 L290 323 Z"/><text class="tms" x="325" y="327" text-anchor="middle">0</text>
+      <path class="f-hatch" d="M364 310 H426 L430 323 L426 336 H364 L360 323 Z"/>
+      <path class="f-box" d="M434 310 H496 L500 323 L496 336 H434 L430 323 Z"/><text class="tms" x="465" y="327" text-anchor="middle">0</text>
+      <path class="f-hatch" d="M504 310 H566 L570 323 L566 336 H504 L500 323 Z"/>
+      <path class="f-box" d="M574 310 H636 L640 323 L636 336 H574 L570 323 Z"/><text class="tms" x="605" y="327" text-anchor="middle">1</text>
+      <path class="f-hatch" d="M644 310 H706 L710 323 L706 336 H644 L640 323 Z"/>
+      <path class="f-box" d="M714 310 H776 L780 323 L776 336 H714 L710 323 Z"/><text class="tms" x="745" y="327" text-anchor="middle">23</text>
+      <path class="f-box" d="M784 310 H846 L850 323 L846 336 H784 L780 323 Z"/><text class="tms" x="815" y="327" text-anchor="middle">14</text>
+    </g>
+  </svg>
+  <figcaption><b>Abbildung 9:</b> Zeitdiagramm (Takte 9–18, Latenz 4). In Takt 10 startet <code>sw</code> auf CTRL
+    die Berechnung (orange hinterlegt). Nach vier Taktflanken ist ab Takt 14 <code>STATUS = 1</code> (grün
+    hinterlegt). Schraffiert: Der Bus führt das ALU-Ergebnis eines Befehls ohne Speicherzugriff – ein Wert, den
+    die Peripherie ignorieren muss.</figcaption>
+</figure>
+
+<h3>Entwurfsentscheidungen</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Entscheidung</th><th>Begründung</th></tr></thead>
+  <tbody>
+    <tr><td>STATUS ist ein einzelnes Bit (0/1)</td><td>Die CPU hat nur <code>beq</code> und kein <code>andi</code>.
+      Die Warteschleife <code>lw</code> + <code>beq $t5, $zero, poll</code> funktioniert nur, wenn STATUS im
+      Wartezustand genau 0 ist.</td></tr>
+    <tr><td>Lesen ohne Seiteneffekte</td><td>Ohne MemRead-Signal liegt bei jedem Befehl eine Adresse am Bus an.
+      Ein „Löschen beim Lesen“ würde durch beliebige Befehle ausgelöst.</td></tr>
+    <tr><td>Start über eigenes Register CTRL</td><td>Eindeutiger Startzeitpunkt; Operanden können in beliebiger
+      Reihenfolge geschrieben werden.</td></tr>
+    <tr><td>Latenz einstellbar (≥ 1)</td><td>Erlaubt, verschiedene Hardware-Varianten (kombinatorisch,
+      gepipelined, sequentiell) vorab zu bewerten.</td></tr>
+    <tr><td>Festkomma mit <code>fracBits</code> Nachkommabits</td><td>0 = Ganzzahl, 15 = Q15 usw. Produkte in voller
+      Breite, arithmetischer Rechtsshift (Abrundung), Abschneiden auf 32 Bit ohne Sättigung.</td></tr>
+    <tr><td>Schreiben auf nur lesbare Register = Fehler</td><td>Deckt Programmierfehler im Emulator auf; in
+      Hardware würde der Zugriff ignoriert.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Die statische Methode <code>ComplexMultiplier.multiply(aRe, aIm, bRe, bIm, fracBits)</code> liefert die
+Erwartungswerte auch ohne Simulation, z. B. für Testvektoren einer VHDL-Testbench.</p>
+
+<!-- ============================================================ 10 -->
+<h2 id="export">10 Hex-Export <span class="badge ext">Erweiterung 2026</span></h2>
+<p><code>export.HexExporter</code> gibt nach erfolgreicher Simulation den Code auf der Konsole aus und schreibt
+fünf Dateien:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Datei</th><th>Inhalt und Verwendung</th></tr></thead>
+  <tbody>
+    <tr><td><code>&lt;name&gt;_Instruction_Memory.vhd</code></td><td>Vollständiger Ersatz für
+      <code>Instruction_Memory.vhd</code> im cristian1604-Projekt, inklusive Quelltext als Kommentar</td></tr>
+    <tr><td><code>&lt;name&gt;_vhdl.txt</code></td><td>Nur die Byte-Tupel zum Einfügen in eine bestehende Datei</td></tr>
+    <tr><td><code>&lt;name&gt;.hex</code></td><td>Ein 32-Bit-Wort pro Zeile (wie MARS „Hexadecimal Text“, z. B. für <code>$readmemh</code>)</td></tr>
+    <tr><td><code>&lt;name&gt;_bus_trace.txt</code></td><td>Erwartete Buszugriffe mit Takt, PC, R/W, Adresse, Daten – zum
+      Vergleich mit der Testbench</td></tr>
+    <tr><td><code>&lt;name&gt;_ergebnis.txt</code></td><td>Endzustand: Taktzahl, Register ≠ 0, RAM-Inhalt,
+      Beschleunigerzustand</td></tr>
+  </tbody>
+</table>
+</div>
+<h4>Ausschnitt <code>complex_mul_acc_Instruction_Memory.vhd</code></h4>
+<pre><code>x"20",x"10",x"7f",x"00",  -- 0x0000: addi $s0, $zero, 32512
+x"20",x"08",x"00",x"03",  -- 0x0004: addi $t0, $zero, 3
+…
+x"ae",x"0c",x"00",x"10",  -- 0x0028: sw $t4, 16($s0)
+x"8e",x"0d",x"00",x"14",  -- 0x002c: lw $t5, 20($s0)
+x"11",x"a0",x"ff",x"fe",  -- 0x0030: beq $t5, $zero, -2
+…
+x"08",x"00",x"00",x"11",  -- 0x0044: j 0x00000044
+
+others=> x"00");</code></pre>
+<h4>Ausschnitt <code>complex_mul_acc_bus_trace.txt</code></h4>
+<pre><code>#     Takt  PC          R/W  Adresse     Daten             (dez)  Gerät
+        10  0x00000028  W  0x00007f10  0x00000001            1  CMUL
+        11  0x0000002c  R  0x00007f14  0x00000000            0  CMUL
+        15  0x0000002c  R  0x00007f14  0x00000001            1  CMUL
+        17  0x00000034  R  0x00007f18  0x00000017           23  CMUL
+        18  0x00000038  R  0x00007f1c  0x0000000e           14  CMUL</code></pre>
+<p>Programme über 512 Byte (128 Befehle) erzeugen eine Warnung; das Array in der erzeugten VHDL-Datei wird dann
+vergrößert.</p>
+
+<!-- ============================================================ 11 -->
+<h2 id="klassen">11 Klassenstruktur</h2>
+<figure>
+  <svg viewBox="0 0 900 530" role="img" aria-labelledby="clsTitle">
+    <title id="clsTitle">Klassendiagramm</title>
+    <!-- Beziehungen zuerst, damit Kästen darüber liegen -->
+    <path class="ln" d="M120 182 L400 66" marker-end="url(#tri)"/>
+    <path class="ln" d="M350 160 L425 66" marker-end="url(#tri)"/>
+    <path class="ln" d="M480 190 H452" marker-end="url(#tri)"/>
+    <path class="ln" d="M120 220 V318" marker-end="url(#arr)"/>
+    <path class="ln" d="M500 235 L222 325" marker-end="url(#arr)"/>
+    <path class="ln" d="M560 235 L380 318" marker-end="url(#arr)"/>
+    <path class="ln" d="M620 235 L590 318" marker-end="url(#arr)"/>
+    <path class="ln" d="M680 350 H708" marker-end="url(#arr)"/>
+    <path class="ln" d="M620 450 L760 367" marker-end="url(#tri)"/>
+    <path class="ln" d="M790 450 L795 367" marker-end="url(#tri)"/>
+    <path class="ln" d="M350 380 V448" marker-end="url(#arr)"/>
+    <path class="ln" d="M120 110 V158" marker-end="url(#arr)"/>
+    <path class="ln" d="M220 90 L560 158" marker-end="url(#arr)"/>
+    <path class="ln" d="M770 110 L660 158" marker-end="url(#arr)"/>
+    <!-- Loader -->
+    <rect class="f-mix" x="20" y="20" width="200" height="90" rx="6"/>
+    <text class="tb" x="30" y="38">loader.Loader</text><line class="axis" x1="20" y1="44" x2="220" y2="44"/>
+    <text class="tms" x="30" y="60">load()</text><text class="tms" x="30" y="74">runBatch(args)</text>
+    <text class="tms" x="30" y="88">createCristianSystem()</text><text class="tms" x="30" y="102">readSourceLines()</text>
+    <!-- CPU -->
+    <rect class="f-orig" x="350" y="20" width="200" height="46" rx="6"/>
+    <text class="tb" x="360" y="38">«interface» CPU</text><line class="axis" x1="350" y1="44" x2="550" y2="44"/>
+    <text class="tms" x="360" y="59">run(List&lt;String&gt;)</text>
+    <!-- HexExporter -->
+    <rect class="f-ext" x="680" y="20" width="200" height="90" rx="6"/>
+    <text class="tb" x="690" y="38">export.HexExporter</text><line class="axis" x1="680" y1="44" x2="880" y2="44"/>
+    <text class="tms" x="690" y="60">toVhdlTuples()</text><text class="tms" x="690" y="74">toInstructionMemoryVhd()</text>
+    <text class="tms" x="690" y="88">toHexWords() · toBusTrace()</text><text class="tms" x="690" y="102">exportAll()</text>
+    <!-- simpleCPU -->
+    <rect class="f-orig" x="20" y="160" width="200" height="60" rx="6"/>
+    <text class="tb" x="30" y="178">simpleCPU</text><line class="axis" x1="20" y1="184" x2="220" y2="184"/>
+    <text class="tms" x="30" y="200">run(List&lt;String&gt;)</text><text class="tms" x="30" y="214">readReg() · writeReg()</text>
+    <!-- AbstractCPU -->
+    <rect class="f-mix" x="250" y="160" width="200" height="46" rx="6"/>
+    <text class="tb" x="260" y="178">AbstractCPU</text><line class="axis" x1="250" y1="184" x2="450" y2="184"/>
+    <text class="tms" x="260" y="199">intToBits() · bitsToInt()</text>
+    <!-- Cristian1604CPU -->
+    <rect class="f-ext" x="480" y="160" width="220" height="75" rx="6"/>
+    <text class="tb" x="490" y="178">Cristian1604CPU</text><line class="axis" x1="480" y1="184" x2="700" y2="184"/>
+    <text class="tms" x="490" y="200">run(name, lines)</text><text class="tms" x="490" y="214">execute() · step() · alu()</text>
+    <text class="tms" x="490" y="228">isSuccessful() · getProgram()</text>
+    <!-- Register -->
+    <rect class="f-mix" x="20" y="320" width="200" height="60" rx="6"/>
+    <text class="tb" x="30" y="338">memory.Register</text><line class="axis" x1="20" y1="344" x2="220" y2="344"/>
+    <text class="tms" x="30" y="360">get(i) · set(i, bits)</text><text class="tms" x="30" y="374">printAllRegisters()</text>
+    <!-- Assembler -->
+    <rect class="f-ext" x="250" y="320" width="200" height="60" rx="6"/>
+    <text class="tb" x="260" y="338">Assembler</text><line class="axis" x1="250" y1="344" x2="450" y2="344"/>
+    <text class="tms" x="260" y="360">assemble(name, lines)</text><text class="tms" x="260" y="374">→ Program</text>
+    <!-- Bus -->
+    <rect class="f-ext" x="480" y="320" width="200" height="60" rx="6"/>
+    <text class="tb" x="490" y="338">bus.Bus</text><line class="axis" x1="480" y1="344" x2="680" y2="344"/>
+    <text class="tms" x="490" y="360">attach() · read() · write()</text><text class="tms" x="490" y="374">tick() · getTransactions()</text>
+    <!-- BusDevice -->
+    <rect class="f-ext" x="710" y="320" width="170" height="46" rx="6"/>
+    <text class="tb" x="720" y="338">«interface» BusDevice</text><line class="axis" x1="710" y1="344" x2="880" y2="344"/>
+    <text class="tms" x="720" y="359">read · write · tick</text>
+    <!-- Program/Isa -->
+    <rect class="f-ext" x="250" y="450" width="200" height="60" rx="6"/>
+    <text class="tb" x="260" y="468">Program · Isa</text><line class="axis" x1="250" y1="474" x2="450" y2="474"/>
+    <text class="tms" x="260" y="490">Maschinenwörter, Labels</text><text class="tms" x="260" y="504">Opcodes, Disassembler</text>
+    <!-- DataMemory -->
+    <rect class="f-ext" x="480" y="450" width="180" height="46" rx="6"/>
+    <text class="tb" x="490" y="468">DataMemory</text><line class="axis" x1="480" y1="474" x2="660" y2="474"/>
+    <text class="tms" x="490" y="489">RAM, 4 KiB</text>
+    <!-- ComplexMultiplier -->
+    <rect class="f-ext" x="690" y="450" width="190" height="60" rx="6"/>
+    <text class="tb" x="700" y="468">ComplexMultiplier</text><line class="axis" x1="690" y1="474" x2="880" y2="474"/>
+    <text class="tms" x="700" y="490">A/B/CTRL/STATUS/RES</text><text class="tms" x="700" y="504">multiply() (Golden Model)</text>
+  </svg>
+  <figcaption><b>Abbildung 10:</b> Vereinfachtes Klassendiagramm. Hohle Dreiecke: Vererbung bzw. Implementierung;
+    offene Pfeile: Verwendung. Farbe wie in Abbildung 2 (blau = 2018, orange = 2026, geteilt = erweitert).</figcaption>
+</figure>
+
+<!-- ============================================================ 12 -->
+<h2 id="bedienung">12 Bedienung</h2>
+
+<h3>Übersetzen und Starten</h3>
+<pre><code>javac -encoding UTF-8 -d out $(find src -name '*.java')
+
+java -cp out Main                                 # Menü (wie 2018)
+java -cp out Main complex_mul_acc.asm             # ohne Rückfragen, Export nach export/
+java -cp out Main complex_mul_acc.asm --latency 8 --trace
+java -cp out selftest.SelfTest                    # Selbsttest</code></pre>
+<p>In IntelliJ wird <code>Main</code> wie bisher gestartet.</p>
+
+<h3>Interaktives Menü <span class="badge mix">gemischt</span></h3>
+<pre><code>Testmodus aktivieren? (j/n): n
+Willkommen zum MIPS-Emulator!
+Bitte wählen Sie eine CPU-Variante:
+1 - Standard CPU (vereinfachte Lern-CPU)
+2 - cristian1604-MIPS mit Beschleuniger für komplexe Multiplikation am Bus
+Ihre Wahl: 2
+Name der zu ladenden .asm-Datei (z. B. 'xy.asm'): complex_mul_acc.asm
+Latenz des Beschleunigers in Takten [4]:
+Nachkommabits der Festkommadarstellung (0 = Ganzzahl) [0]:
+…
+Hex-Dateien nach 'export/' schreiben? (j/n): j</code></pre>
+<p>Testmodus, CPU-Auswahl und Dateiname stammen aus der Originalimplementierung. Die Abfragen von Latenz,
+Nachkommabits und Export gehören zur Erweiterung. Bei Menüpunkt 2 schaltet der Testmodus zusätzlich den Trace
+jedes Befehls ein.</p>
+
+<h3>Kommandozeilenoptionen <span class="badge ext">Erweiterung 2026</span></h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Option</th><th>Bedeutung</th><th>Standard</th></tr></thead>
+  <tbody>
+    <tr><td><code>--cpu simple|cristian</code></td><td>alte Lern-CPU oder cristian1604-MIPS</td><td><code>cristian</code></td></tr>
+    <tr><td><code>--latency N</code></td><td>Takte bis der Beschleuniger fertig ist</td><td>4</td></tr>
+    <tr><td><code>--frac N</code></td><td>Nachkommabits (0 = Ganzzahl)</td><td>0</td></tr>
+    <tr><td><code>--max-cycles N</code></td><td>Zyklenlimit</td><td>1&nbsp;000&nbsp;000</td></tr>
+    <tr><td><code>--trace</code></td><td>jeden Befehl und Buszugriff ausgeben</td><td>aus</td></tr>
+    <tr><td><code>--export DIR</code></td><td>Zielverzeichnis</td><td><code>export</code></td></tr>
+    <tr><td><code>--no-export</code></td><td>nur Konsolenausgabe</td><td>–</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Exit-Code 0 bei erfolgreicher Simulation, sonst 1. Die <code>.asm</code>-Datei wird zuerst im Klassenpfad unter
+<code>Programm/</code> gesucht (wie 2018), dann im Dateisystem.</p>
+
+<!-- ============================================================ 13 -->
+<h2 id="ergebnisse">13 Beispielprogramme und Ergebnisse <span class="badge ext">Erweiterung 2026</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Programm</th><th>Inhalt</th><th class="num">Befehle</th><th class="num">Takte</th></tr></thead>
+  <tbody>
+    <tr><td><code>complex_mul_acc.asm</code></td><td>(3 + 4j)·(5 − 2j) mit dem Beschleuniger</td><td class="num">18</td><td class="num">22*</td></tr>
+    <tr><td><code>complex_mul_sw.asm</code></td><td>dasselbe in Software, Multiplikation durch wiederholte Addition</td><td class="num">53</td><td class="num">93</td></tr>
+    <tr><td><code>cristian_beispiel.asm</code></td><td>6 · 4 aus dem cristian1604-README, ergänzt um <code>halt</code></td><td class="num">9</td><td class="num">30</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="meta">* bei Latenz 4</p>
+<p>Beide Varianten der komplexen Multiplikation liefern 23 + 14j in RAM[0] und RAM[4]. Abbildung 11 zeigt, wie
+sich die Latenz des Beschleunigers auf die Gesamttaktzahl auswirkt.</p>
+
+<figure>
+  <svg viewBox="0 0 860 320" role="img" aria-labelledby="cycTitle">
+    <title id="cycTitle">Takte von complex_mul_acc.asm in Abhängigkeit von der Latenz</title>
+    <g>
+      <line class="grid" x1="70" y1="30" x2="820" y2="30"/>
+      <line class="grid" x1="70" y1="90" x2="820" y2="90"/>
+      <line class="grid" x1="70" y1="150" x2="820" y2="150"/>
+      <line class="grid" x1="70" y1="210" x2="820" y2="210"/>
+      <line class="axis" x1="70" y1="270" x2="820" y2="270"/>
+      <g text-anchor="end">
+        <text class="ts" x="62" y="34">100</text><text class="ts" x="62" y="94">75</text>
+        <text class="ts" x="62" y="154">50</text><text class="ts" x="62" y="214">25</text><text class="ts" x="62" y="274">0</text>
+      </g>
+      <text class="ts" x="10" y="18">Takte</text>
+    </g>
+    <!-- Referenzlinie Software -->
+    <line x1="70" y1="46.8" x2="820" y2="46.8" style="stroke: var(--text-secondary); stroke-width: 1.5"/>
+    <text class="t" x="820" y="40" text-anchor="end">Software ohne Beschleuniger: 93 Takte</text>
+    <!-- Säulen -->
+    <path class="m-s3" data-tip="Latenz 1: 18 Takte (5,2× schneller)" d="M120.5 270 V230.8 a4 4 0 0 1 4 -4 h16 a4 4 0 0 1 4 4 V270 z"/>
+    <path class="m-s3" data-tip="Latenz 2: 20 Takte (4,7× schneller)" d="M245.5 270 V226 a4 4 0 0 1 4 -4 h16 a4 4 0 0 1 4 4 V270 z"/>
+    <path class="m-s3" data-tip="Latenz 4: 22 Takte (4,2× schneller)" d="M370.5 270 V221.2 a4 4 0 0 1 4 -4 h16 a4 4 0 0 1 4 4 V270 z"/>
+    <path class="m-s3" data-tip="Latenz 8: 26 Takte (3,6× schneller)" d="M495.5 270 V211.6 a4 4 0 0 1 4 -4 h16 a4 4 0 0 1 4 4 V270 z"/>
+    <path class="m-s3" data-tip="Latenz 16: 34 Takte (2,7× schneller)" d="M620.5 270 V192.4 a4 4 0 0 1 4 -4 h16 a4 4 0 0 1 4 4 V270 z"/>
+    <path class="m-s3" data-tip="Latenz 32: 50 Takte (1,9× schneller)" d="M745.5 270 V154 a4 4 0 0 1 4 -4 h16 a4 4 0 0 1 4 4 V270 z"/>
+    <g text-anchor="middle">
+      <text class="t" x="132.5" y="220">18</text><text class="t" x="257.5" y="215">20</text><text class="t" x="382.5" y="210">22</text>
+      <text class="t" x="507.5" y="201">26</text><text class="t" x="632.5" y="182">34</text><text class="t" x="757.5" y="143">50</text>
+      <text class="ts" x="132.5" y="288">1</text><text class="ts" x="257.5" y="288">2</text><text class="ts" x="382.5" y="288">4</text>
+      <text class="ts" x="507.5" y="288">8</text><text class="ts" x="632.5" y="288">16</text><text class="ts" x="757.5" y="288">32</text>
+      <text class="ts" x="445" y="310">Latenz des Beschleunigers in Takten</text>
+    </g>
+  </svg>
+  <figcaption><b>Abbildung 11:</b> Gesamttakte von <code>complex_mul_acc.asm</code> bei verschiedenen Latenzen,
+    verglichen mit der Software-Variante (Linie). Die Taktzahl wächst um etwa einen Takt pro Latenztakt, weil die
+    Warteschleife aus zwei Befehlen besteht.</figcaption>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="num">Latenz</th><th class="num">Takte mit Beschleuniger</th><th class="num">Takte Software</th><th class="num">Beschleunigung</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="num">18</td><td class="num">93</td><td class="num">5,2×</td></tr>
+        <tr><td class="num">2</td><td class="num">20</td><td class="num">93</td><td class="num">4,7×</td></tr>
+        <tr><td class="num">4</td><td class="num">22</td><td class="num">93</td><td class="num">4,2×</td></tr>
+        <tr><td class="num">8</td><td class="num">26</td><td class="num">93</td><td class="num">3,6×</td></tr>
+        <tr><td class="num">16</td><td class="num">34</td><td class="num">93</td><td class="num">2,7×</td></tr>
+        <tr><td class="num">32</td><td class="num">50</td><td class="num">93</td><td class="num">1,9×</td></tr>
+      </tbody>
+    </table>
+  </div>
+</figure>
+<p class="meta">Die Software-Taktzahl hängt von den Operanden ab (wiederholte Addition, etwa drei Takte pro
+Einheit des Multiplikators). Bei größeren Operanden fällt der Vorteil des Beschleunigers deutlich höher aus; die
+Werte gelten für das Beispiel (3 + 4j)·(5 − 2j).</p>
+
+<!-- ============================================================ 14 -->
+<h2 id="test">14 Test und Verifikation <span class="badge ext">Erweiterung 2026</span></h2>
+<p><code>selftest.SelfTest</code> kommt ohne externes Test-Framework aus und prüft:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Test</th><th>Prüft</th><th>Ergebnis</th></tr></thead>
+  <tbody>
+    <tr><td>Kodierung README-Beispiel</td><td>Alle 8 Befehle des cristian1604-Beispiels Byte für Byte gegen den dort
+      veröffentlichten Hex-Code</td><td>bestanden</td></tr>
+    <tr><td>Roundtrip</td><td>Disassemblieren und erneutes Assemblieren ergibt dasselbe Maschinenwort (18 Befehle)</td><td>bestanden</td></tr>
+    <tr><td>Nicht unterstützte Befehle</td><td><code>mult</code> wird mit Fehlermeldung abgelehnt</td><td>bestanden</td></tr>
+    <tr><td>Beschleuniger-Programm</td><td>23 + 14j bei Latenz 1, 4 und 16</td><td>bestanden</td></tr>
+    <tr><td>Software-Referenz</td><td>23 + 14j ohne Beschleuniger</td><td>bestanden</td></tr>
+    <tr><td>Festkomma</td><td>(0,5 + 0,5j)² = 0,5j im Q15-Format</td><td>bestanden</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Zusätzlich manuell geprüft: Fehlerpfade (Assemblerfehler, Busfehler auf unbelegter Adresse, Programm ohne
+<code>halt</code>), Exit-Codes im Kommandozeilenmodus, das interaktive Menü mit beiden CPUs und die Standard-CPU
+mit <code>test2.asm</code> (unverändertes Verhalten).</p>
+
+<h3>Empfohlener Abgleich mit der Hardware</h3>
+<ol>
+  <li>Programm im Emulator simulieren und exportieren</li>
+  <li><code>&lt;name&gt;_Instruction_Memory.vhd</code> im cristian1604-Projekt einsetzen</li>
+  <li>In der VHDL-Testbench alle Zugriffe mit <code>memwrite = '1'</code> sowie die Lesezugriffe auf den
+    Beschleuniger mit Taktnummer protokollieren</li>
+  <li>Protokoll mit <code>&lt;name&gt;_bus_trace.txt</code> vergleichen, Endzustand mit
+    <code>&lt;name&gt;_ergebnis.txt</code></li>
+</ol>
+
+<!-- ============================================================ 15 -->
+<h2 id="grenzen">15 Grenzen und Ausblick</h2>
+<h3>Bekannte Grenzen <span class="badge ext">Erweiterung 2026</span></h3>
+<ul>
+  <li>Das Taktmodell bildet einen idealen Single-Cycle-Prozessor ab; Laufzeiten und Setup-/Hold-Bedingungen der
+    realen Schaltung werden nicht modelliert.</li>
+  <li>Registerwerte und Speicher sind nach Reset 0. In VHDL ist <code>Register_File</code> nicht initialisiert
+    (<code>'U'</code>) – Programme sollten Register vor dem Lesen beschreiben.</li>
+  <li>Kein <code>.data</code>-Segment: Daten müssen per <code>addi</code>/<code>sw</code> erzeugt werden.</li>
+  <li>Speicherzugriffe nur wortweise.</li>
+  <li>Registerbelegung, Adressen und Zahlenformat des Beschleunigers sind ein begründeter Vorschlag und müssen mit
+    dem endgültigen Hardware-Entwurf abgeglichen werden.</li>
+</ul>
+<h3>Mögliche Erweiterungen</h3>
+<ul>
+  <li>Gepackte Operanden (Real- und Imaginärteil je 16 Bit in einem Wort), um Buszugriffe zu halbieren</li>
+  <li>Sättigung statt Abschneiden im Festkommaformat</li>
+  <li>Automatischer Vergleich eines Testbench-Protokolls mit dem Bus-Trace</li>
+  <li>Generierung einer VHDL-Testbench mit den erwarteten Werten</li>
+  <li>Übernahme der symbolischen Registernamen und Labels in <code>simpleCPU</code></li>
+</ul>
+
+<!-- ============================================================ Anhang -->
+<h2 id="anhang">Anhang: Dateiverzeichnis mit Herkunft</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Datei</th><th>Herkunft</th><th class="num">Zeilen</th><th>Zweck</th></tr></thead>
+  <tbody>
+    <tr><td><code>src/Main.java</code></td><td><span class="badge mix">gemischt</span></td><td class="num">15</td><td>Einstiegspunkt, Menü oder Kommandozeile</td></tr>
+    <tr><td><code>src/loader/Loader.java</code></td><td><span class="badge mix">gemischt</span></td><td class="num">265</td><td>Menü, Laden, Systemaufbau, Export-Steuerung</td></tr>
+    <tr><td><code>src/CPU/CPU.java</code></td><td><span class="badge orig">2018</span></td><td class="num">8</td><td>CPU-Schnittstelle</td></tr>
+    <tr><td><code>src/CPU/AbstractCPU.java</code></td><td><span class="badge mix">gemischt</span></td><td class="num">29</td><td>Basisklasse, Bit-Hilfsmethoden</td></tr>
+    <tr><td><code>src/CPU/simpleCPU.java</code></td><td><span class="badge orig">2018</span></td><td class="num">139</td><td>Lern-CPU, Textinterpretation</td></tr>
+    <tr><td><code>src/CPU/Cristian1604CPU.java</code></td><td><span class="badge ext">2026</span></td><td class="num">256</td><td>Emulation des cristian1604-MIPS</td></tr>
+    <tr><td><code>src/CPU/SimulationException.java</code></td><td><span class="badge ext">2026</span></td><td class="num">8</td><td>Laufzeitfehler</td></tr>
+    <tr><td><code>src/memory/Register.java</code></td><td><span class="badge mix">gemischt</span></td><td class="num">112</td><td>Registerfeld (Bit-Arrays)</td></tr>
+    <tr><td><code>src/memory/specialproposeReg.java</code></td><td><span class="badge orig">2018</span></td><td class="num">4</td><td>Platzhalter Spezialregister</td></tr>
+    <tr><td><code>src/memory/DataMemory.java</code></td><td><span class="badge ext">2026</span></td><td class="num">64</td><td>Datenspeicher am Bus</td></tr>
+    <tr><td><code>src/assembler/Assembler.java</code></td><td><span class="badge ext">2026</span></td><td class="num">373</td><td>Zwei-Pass-Assembler</td></tr>
+    <tr><td><code>src/assembler/Isa.java</code></td><td><span class="badge ext">2026</span></td><td class="num">109</td><td>Befehlssatz, Registernamen, Disassembler</td></tr>
+    <tr><td><code>src/assembler/Program.java</code></td><td><span class="badge ext">2026</span></td><td class="num">50</td><td>Assembliertes Programm</td></tr>
+    <tr><td><code>src/assembler/AssembledInstruction.java</code></td><td><span class="badge ext">2026</span></td><td class="num">8</td><td>Ein Maschinenbefehl mit Herkunft</td></tr>
+    <tr><td><code>src/assembler/AssemblerException.java</code></td><td><span class="badge ext">2026</span></td><td class="num">17</td><td>Gesammelte Assemblerfehler</td></tr>
+    <tr><td><code>src/bus/Bus.java</code></td><td><span class="badge ext">2026</span></td><td class="num">78</td><td>Datenbus</td></tr>
+    <tr><td><code>src/bus/BusDevice.java</code></td><td><span class="badge ext">2026</span></td><td class="num">32</td><td>Geräteschnittstelle</td></tr>
+    <tr><td><code>src/bus/BusTransaction.java</code></td><td><span class="badge ext">2026</span></td><td class="num">19</td><td>Protokolleintrag</td></tr>
+    <tr><td><code>src/bus/BusException.java</code></td><td><span class="badge ext">2026</span></td><td class="num">8</td><td>Busfehler</td></tr>
+    <tr><td><code>src/bus/MemoryMap.java</code></td><td><span class="badge ext">2026</span></td><td class="num">21</td><td>Speicherbelegung</td></tr>
+    <tr><td><code>src/accelerator/ComplexMultiplier.java</code></td><td><span class="badge ext">2026</span></td><td class="num">173</td><td>Verhaltensmodell Beschleuniger</td></tr>
+    <tr><td><code>src/export/HexExporter.java</code></td><td><span class="badge ext">2026</span></td><td class="num">153</td><td>Hex-Ausgabe und Export</td></tr>
+    <tr><td><code>src/selftest/SelfTest.java</code></td><td><span class="badge ext">2026</span></td><td class="num">138</td><td>Selbsttest</td></tr>
+    <tr><td><code>src/Programm/kleine.asm</code></td><td><span class="badge orig">2018</span></td><td class="num">26</td><td>Beispiel Lern-CPU</td></tr>
+    <tr><td><code>src/Programm/test.asm</code></td><td><span class="badge orig">2018</span></td><td class="num">1</td><td>Beispiel Lern-CPU</td></tr>
+    <tr><td><code>src/Programm/test2.asm</code></td><td><span class="badge orig">2018</span></td><td class="num">26</td><td>Beispiel Lern-CPU</td></tr>
+    <tr><td><code>src/Programm/testit.ams</code></td><td><span class="badge orig">2018</span></td><td class="num">9</td><td>Beispiel Lern-CPU</td></tr>
+    <tr><td><code>src/Programm/complex_mul_acc.asm</code></td><td><span class="badge ext">2026</span></td><td class="num">40</td><td>Komplexe Multiplikation mit Beschleuniger</td></tr>
+    <tr><td><code>src/Programm/complex_mul_sw.asm</code></td><td><span class="badge ext">2026</span></td><td class="num">77</td><td>Komplexe Multiplikation in Software</td></tr>
+    <tr><td><code>src/Programm/cristian_beispiel.asm</code></td><td><span class="badge ext">2026</span></td><td class="num">16</td><td>Beispiel aus dem cristian1604-README</td></tr>
+    <tr><td><code>README.md</code></td><td><span class="badge mix">gemischt</span></td><td class="num">–</td><td>Einleitung 2018, Abschnitt zur Erweiterung 2026</td></tr>
+    <tr><td><code>Doku/</code></td><td><span class="badge ext">2026</span></td><td class="num">–</td><td>Diese Dokumentation (HTML und PDF)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Quellen</h3>
+<ul>
+  <li>C. Bottazzi: <i>MIPS – VHDL implementation of a Single-Cycle MIPS Processor</i>,
+    <a href="https://github.com/cristian1604/mips">github.com/cristian1604/mips</a>, GPL-3.0</li>
+  <li>D. M. Harris, S. L. Harris: <i>Digital Design and Computer Architecture</i>, Elsevier, 2007</li>
+  <li>D. A. Patterson, J. L. Hennessy: <i>Computer Organization and Design</i>, Morgan Kaufmann, 2012</li>
+  <li>MARS – MIPS Assembler and Runtime Simulator, Missouri State University</li>
+</ul>
+
+</main>
+
+<div id="tip" role="tooltip"></div>
+<script>
+  (function () {
+    var tip = document.getElementById('tip');
+    document.querySelectorAll('[data-tip]').forEach(function (el) {
+      el.addEventListener('mousemove', function (e) {
+        tip.textContent = el.getAttribute('data-tip');
+        tip.style.display = 'block';
+        var x = e.clientX + 14, y = e.clientY + 14;
+        var w = tip.offsetWidth, h = tip.offsetHeight;
+        if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+        if (y + h > window.innerHeight - 8) y = e.clientY - h - 14;
+        tip.style.left = x + 'px';
+        tip.style.top = y + 'px';
+      });
+      el.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+    });
+  })();
+</script>
+</body>
+</html>

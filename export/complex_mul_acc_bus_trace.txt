@@ -1,0 +1,14 @@
+# Takt = Index des ausgeführten Befehls ab Reset (0-basiert), ein Befehl pro Takt
+#     Takt  PC          R/W  Adresse     Daten             (dez)  Gerät
+         5  0x00000014  W  0x00007f00  0x00000003            3  CMUL
+         6  0x00000018  W  0x00007f04  0x00000004            4  CMUL
+         7  0x0000001c  W  0x00007f08  0x00000005            5  CMUL
+         8  0x00000020  W  0x00007f0c  0xfffffffe           -2  CMUL
+        10  0x00000028  W  0x00007f10  0x00000001            1  CMUL
+        11  0x0000002c  R  0x00007f14  0x00000000            0  CMUL
+        13  0x0000002c  R  0x00007f14  0x00000000            0  CMUL
+        15  0x0000002c  R  0x00007f14  0x00000001            1  CMUL
+        17  0x00000034  R  0x00007f18  0x00000017           23  CMUL
+        18  0x00000038  R  0x00007f1c  0x0000000e           14  CMUL
+        19  0x0000003c  W  0x00000000  0x00000017           23  RAM
+        20  0x00000040  W  0x00000004  0x0000000e           14  RAM
